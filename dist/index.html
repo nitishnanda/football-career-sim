@@ -1554,13 +1554,19 @@ function assignSides(arr){
   });
   return m;
 }
+/* Players stay in the position the data gives them. When a squad is short somewhere, a player may only be moved there if he is genuinely listed at two
+   positions (POSALT, from club sites), or if the data only calls him a "CM" (its generic midfielder label), which can be an AM or DM. Anything else is
+   filled with a generated player instead of turning, say, a winger into a full-back. */
+const POSALT={'Ben White':['FB'],'Jurriën Timber':['CB'],'Trent Alexander-Arnold':['CM'],'Joshua Kimmich':['FB','CM'],'João Cancelo':['FB'],'Kyle Walker':['CB'],'Reece James':['CM'],'Rico Lewis':['CM'],'Oleksandr Zinchenko':['CM'],"Nico O'Reilly":['W'],'Marc Cucurella':['CB'],'Alphonso Davies':['W'],'Jeremie Frimpong':['W'],'Lewis Hall':['CM'],'Matheus Nunes':['CM'],'Rayan Aït-Nouri':['W'],'Declan Rice':['DM'],'Martin Ødegaard':['CM'],'Bernardo Silva':['W','AM'],'Phil Foden':['W'],'Kai Havertz':['ST'],'Julián Álvarez':['AM'],'Marcus Thuram':['W'],'Kylian Mbappé':['W'],'Ousmane Dembélé':['ST'],'Gabriel Jesus':['W'],'Eberechi Eze':['W'],'Ryan Gravenberch':['CM'],'Martín Zubimendi':['CM'],'Aurélien Tchouaméni':['CB'],'Eduardo Camavinga':['FB'],'Federico Valverde':['FB','W'],'Jules Koundé':['FB'],'Cole Palmer':['W'],'Alexis Mac Allister':['DM'],'Moisés Caicedo':['DM'],'Enzo Fernández':['DM'],'Sandro Tonali':['DM'],'Bruno Guimarães':['DM'],'Rodri':['CM'],'Pedri':['AM'],'Florian Wirtz':['W'],'Jamal Musiala':['W'],'Luis Díaz':['ST'],'Bryan Mbeumo':['ST']};
+let _PA=null;
+const canSwitch=(x,pos)=>{if(x.pos==='CM'&&(pos==='AM'||pos==='DM'))return true;if(!_PA){_PA={};for(const k in POSALT)_PA[norm0(k)]=POSALT[k]}const a=_PA[norm0(x.n||'')];return!!a&&a.includes(pos)};
 // real squad -> ratings. Order within a position by caps, squad number and age; ratings hang off club strength.
 function addReal(g,c,list){
   const L=list.map(([t,d,pos,by,nat,caps,no,v,m,pid,gs,asr,pf,evm])=>({gs,asr,pf,evm:evm||0,fx:pid!==0&&hasPosFix(t.replace(/\s*\(.*\)$/,'')),n:t.replace(/\s*\(.*\)$/,''),pos:pid!==0?posFix(t.replace(/\s*\(.*\)$/,''),pos):pos,age:clamp(ST.season-by,16,42),nat:nat==='United States'?'USA':(nat||LGN[c.lg].nat),caps,v:v||0,m:m||0,q:caps+(v||0)*2+(m||0)/20+(no>0&&no<=11?12:no>0&&no<=25?6:0)}));
   L.forEach(x=>{if(x.age>=24&&x.age<=31)x.q+=4});
   const cov=L.filter(x=>x.v>0).length/L.length;
   const cnt=p=>L.filter(x=>x.pos===p).length;
-  for(const pos in NSL)while(cnt(pos)<NSL[pos]){const dn=DON[pos].find(d=>cnt(d)>NSL[d]&&L.some(x=>x.pos===d&&!x.fx));if(!dn)break;const cv=L.filter(x=>x.pos===dn&&!x.fx).sort((a,b)=>a.q-b.q)[0];cv.pos=pos;cv.conv=1}   // a converted player takes whichever flank the squad lacks
+  for(const pos in NSL)while(cnt(pos)<NSL[pos]){let cv=null;for(const d of DON[pos]){if(cnt(d)<=NSL[d])continue;cv=L.filter(x=>x.pos===d&&!x.fx&&canSwitch(x,pos)).sort((a,b)=>a.q-b.q)[0];if(cv)break}if(!cv)break;cv.pos=pos;cv.conv=1}   // a converted player takes whichever flank the squad lacks
   for(const pos in NSL){
     const arr=L.filter(x=>x.pos===pos).sort((a,b)=>b.q-a.q),k=NSL[pos],made=[];
     arr.forEach((x,r)=>{
@@ -1580,7 +1586,7 @@ function addReal(g,c,list){
     });
     // sides are settled once ratings are known, so the two players who start are one on each flank where possible
     if(SIDED[pos]){const it=made.sort((a,b)=>b.p.ovr-a.p.ovr),m=assignSides(it);for(const o of it)o.p.sd=m.get(o)}
-    for(let r=arr.length;r<k;r++){c.fln=(c.fln||0)+1;addPlayer(g,c,pos,Math.round(c.base-6),26,undefined,{n:c.name+' reserve '+c.fln,nat:LGN[c.lg].nat,fl:1})}
+    for(let r=arr.length;r<k;r++)addPlayer(g,c,pos,Math.round(c.base-6+g.norm(0,2)),g.int(21,30));   // a gap in the real squad: a generated player
   }
 }
 
