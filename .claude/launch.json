@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "football-career-sim",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "8743", "--directory", "/Users/nitishnandakumar/Developer/football-career-sim/dist"],
+      "port": 8743
+    }
+  ]
+}

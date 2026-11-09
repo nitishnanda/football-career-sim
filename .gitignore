@@ -1,0 +1,6 @@
+.env
+data/cache.json
+data/apif_cache.json
+data/apif_mp/
+data/fd/
+.DS_Store

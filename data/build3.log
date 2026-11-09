@@ -1,0 +1,23 @@
+Premier League 20 (expected 20)
+Championship 24 (expected 24)
+League One 24 (expected 24)
+League Two 24 (expected 24)
+La Liga 20 (expected 20)
+La Liga 2 22 (expected 22)
+Primera Federación 40 (expected 40)
+Bundesliga 18 (expected 18)
+2. Bundesliga 18 (expected 18)
+3. Liga 20 (expected 20)
+Serie A 20 (expected 20)
+Serie B 20 (expected 20)
+Ligue 1 18 (expected 18)
+Ligue 2 18 (expected 18)
+Ligue 3 18 (expected 18)
+sqh2 fetched 324
+missing squad templates: 25 ['Arenas Club de Getxo', 'Real Avilés Industrial CF', 'Barakaldo CF', 'Athletic Bilbao B', 'CP Cacereño', 'CD Coria', 'Deportivo Fabril', 'CD Extremadura', 'UD Ourense', 'Águilas FC', 'CE Europa', 'Juventud de Torremolinos CF', 'UE Sant Andreu', 'CD Teruel', 'VFL Wolfsburg', 'TSG 1899 Hoffenheim II', 'FC Würzburger Kickers', 'AC Milan', 'AC Monza', 'SSC Napoli', 'Parma Calcio 1913', 'AS Cannes', 'FC Fleury 91 (men)', 'VFC La Roche-sur-Yon', 'US Thionville Lusitanos']
+clubs needing article fallback: 23
+fullh2 fetched 23
+unique players 6841
+pl 10 / 10
+players missing pos/birth: 96 [':de:Eryk Grzywacz', 'Adrián Rodríguez (footballer)', 'Adrián Rodríguez Sojo', 'Adrián Zango Aguirrezabal', 'Albert García Pérez', 'Alejandro Palomares Tari', 'Alex Quevedo Barber', 'Anartz Peña Zulaika', 'Andrej Popović', 'Anthony Michel Khayat', 'Anthony Munda', 'Antonio David (footballer)', 'Arnau Forés Minguet', 'Benny Benagr', 'Callum Perry', 'Cheikh Tidiane Thiam', 'Christian McFarlane', 'César Bonafé Ceita', 'Daniel Ballard', 'David Muñoz Torres']
+clubs 324 players 6896

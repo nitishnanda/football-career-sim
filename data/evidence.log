@@ -1,0 +1,85 @@
+fixtures 2023 PL 380 requests 1
+fixtures 2023 CH 557 requests 2
+fixtures 2023 L1E 557 requests 3
+fixtures 2023 L2E 557 requests 4
+fixtures 2023 LL 380 requests 5
+fixtures 2023 LL2 468 requests 6
+fixtures 2023 PF1 380 requests 7
+fixtures 2023 PF2 380 requests 8
+fixtures 2023 BL 308 requests 9
+fixtures 2023 BL2 308 requests 10
+fixtures 2023 3L 380 requests 11
+fixtures 2023 SA 380 requests 12
+fixtures 2023 SB 390 requests 13
+fixtures 2023 F1 308 requests 14
+fixtures 2023 F2 382 requests 15
+fixtures 2023 F3 306 requests 16
+fixtures 2024 PL 380 requests 17
+fixtures 2024 CH 557 requests 18
+fixtures 2024 L1E 557 requests 19
+fixtures 2024 L2E 557 requests 20
+fixtures 2024 LL 380 requests 21
+fixtures 2024 LL2 468 requests 22
+fixtures 2024 PF1 380 requests 23
+fixtures 2024 PF2 380 requests 24
+fixtures 2024 BL 308 requests 25
+fixtures 2024 BL2 308 requests 26
+fixtures 2024 3L 380 requests 27
+fixtures 2024 SA 380 requests 28
+fixtures 2024 SB 390 requests 29
+fixtures 2024 F1 308 requests 30
+fixtures 2024 F2 310 requests 31
+fixtures 2024 F3 273 requests 32
+fixtures 2025 PL 380 requests 33
+fixtures 2025 CH 558 requests 34
+fixtures 2025 L1E 557 requests 35
+fixtures 2025 L2E 557 requests 36
+fixtures 2025 LL 380 requests 37
+fixtures 2025 LL2 468 requests 38
+fixtures 2025 PF1 380 requests 39
+fixtures 2025 PF2 380 requests 40
+fixtures 2025 BL 308 requests 41
+fixtures 2025 BL2 308 requests 42
+fixtures 2025 3L 380 requests 43
+fixtures 2025 SA 380 requests 44
+fixtures 2025 SB 390 requests 45
+fixtures 2025 F1 308 requests 46
+fixtures 2025 F2 310 requests 47
+fixtures 2025 F3 306 requests 48
+fixtures 2026 PL 380 requests 49
+fixtures 2026 CH 552 requests 50
+fixtures 2026 L1E 552 requests 51
+fixtures 2026 L2E 552 requests 52
+fixtures 2026 LL 380 requests 53
+fixtures 2026 LL2 462 requests 54
+fixtures 2026 PF1 380 requests 55
+fixtures 2026 PF2 380 requests 56
+fixtures 2026 BL 306 requests 57
+fixtures 2026 BL2 306 requests 58
+fixtures 2026 3L 380 requests 59
+fixtures 2026 SA 380 requests 60
+fixtures 2026 SB 380 requests 61
+fixtures 2026 F1 306 requests 62
+fixtures 2026 F2 306 requests 63
+fixtures 2026 F3 306 requests 64
+players 2025 PL 677 pages 34 requests 98
+players 2025 LL 768 pages 39 requests 137
+players 2025 BL 662 pages 34 requests 171
+players 2025 SA 824 pages 42 requests 213
+players 2025 F1 778 pages 39 requests 252
+players 2024 PL 1127 pages 57 requests 309
+players 2024 LL 1060 pages 53 requests 362
+players 2024 BL 751 pages 38 requests 400
+players 2024 SA 1039 pages 52 requests 452
+players 2024 F1 923 pages 47 requests 499
+players 2023 PL 1015 pages 51 requests 550
+players 2023 LL 890 pages 45 requests 595
+players 2023 BL 770 pages 39 requests 634
+players 2023 SA 1062 pages 54 requests 688
+players 2023 F1 859 pages 43 requests 731
+players 2026 PL 528 pages 27 requests 758
+players 2026 LL 604 pages 31 requests 789
+players 2026 BL 475 pages 24 requests 813
+players 2026 SA 638 pages 32 requests 845
+players 2026 F1 485 pages 25 requests 870
+done; requests used 870
