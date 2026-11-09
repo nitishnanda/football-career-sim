@@ -14,13 +14,12 @@ function refresh(me){
   const keys=me.pos==='GK'?GKK:OUTK,P=PROF[me.pos],AX=archOf(me),ar=AX.att||{},w=OVW[me.pos],off={};
   let sw=0,so=0;
   const ag=attrAging(me,keys);
-  keys.forEach((k,i)=>{off[k]=(P[k]||0)+(ar[k]||0)+(me.dev[k]||0)+(ag[k]||0);sw+=w[i];so+=w[i]*off[k]});
+  keys.forEach((k,i)=>{off[k]=(P[k]||0)+(ar[k]||0)+(me.dev[k]||0)+(ag[k]||0)+((FRAMEG[me.frame]||{})[k]||0);sw+=w[i];so+=w[i]*off[k]});
   const A={};let ov=0;
-  keys.forEach((k,i)=>{A[k]=clamp(Math.round(me.base-so/sw+off[k]),15,ACAP[k]||99);ov+=w[i]*A[k]});
+  keys.forEach((k,i)=>{const rv=me.base-so/sw+off[k];A[k]=clamp(Math.round(me.pos==='GK'?softCap(rv,ACAP[k]||99):rv),15,ACAP[k]||99);ov+=w[i]*A[k]});
   me.attr=A;me.ovr=Math.round(ov/sw);me.peak=Math.max(me.peak||0,me.ovr);
-  me.amax=me.amax||{};for(const k of keys)if(A[k]>(me.amax[k]||0))me.amax[k]=A[k];   // career-best of each attribute: how far the defining one has fallen
- 
   buildSubs(me,A);
+  me.amax=me.amax||{};for(const k of keys){const v=me.gd?me.gd[k]:A[k];if(v>(me.amax[k]||0))me.amax[k]=v}   // career-best of each attribute as shown: how far the defining one has fallen
   // goal and assist share: the group attribute plus how his finishing / vision / passing stand against what is typical for the role
   const sd=me.subd||{};
   me.sc=me.pos==='GK'?0:A.sho-P.sho+.5*(sd.fin||0)+.3*(sd.apo||0)+.2*(sd.com||0);me.ac=me.pos==='GK'?0:A.pas-P.pas+.4*(sd.vis||0)+.3*(sd.spa||0)+.2*(sd.lpa||0)+.1*(sd.cur||0);
@@ -62,7 +61,7 @@ function newCareer(o){
   // personal peak shifts in years for the physical, technical and IQ components (see COMPS): negative peaks early, positive late
   me.pks=clamp(Math.round(R(seed+'|pks').norm(0,2.2)*10)/10,-5,5);me.tks=clamp(Math.round(R(seed+'|tks').norm(0,2.2)*10)/10,-5,5);me.iqs=clamp(Math.round(R(seed+'|iqs').norm(0,3.2)*10)/10,-7,7);
   const fp=o.pos==='GK'?'ref':'pac';
-  me.dev=me.frame==='Lean Wire'?{[fp]:2,phy:-2}:me.frame==='Power Solid'?{[fp]:-2,phy:3}:{[fp]:1,phy:1};
+  me.dev=o.pos==='GK'?(me.frame==='Lean Wire'?{[fp]:2,phy:-2}:me.frame==='Power Solid'?{[fp]:-2,phy:3}:{[fp]:1,phy:1}):{};   // outfield builds act through FRAMEG / FRAMES
   me.base=me.pa*fAge(7);   // the early climb is shared by every position
   const season=clamp(Math.round(o.startYear)||DEFAULT_SEASON,FIRST_HIST,DEFAULT_SEASON);
   ST={v:VER,seed,phase:'youth',season,yr0:season-8,W:{pl:[],free:[],clubs:[]},me,pend:null,hof:[],stat:{n:0,g:0,hw:0,dr:0},inbox:[],archive:[],mid:1,bud:2,tour:null};

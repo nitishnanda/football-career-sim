@@ -349,7 +349,7 @@ const OUTK=['pac','sho','pas','dri','def','phy'],GKK=['div','han','kic','ref','p
 const KL={pac:'Pace',sho:'Shooting',pas:'Passing',dri:'Dribbling',def:'Defending',phy:'Physical',div:'Diving',han:'Handling',kic:'Kicking',ref:'Reflexes',pos:'Positioning'};
 // realistic ceilings per attribute (no gold-card 99s) -- pace is the only one that gets near 99,
 // everything else tops out the way it does on a real top-end base card
-const ACAP={pac:97,sho:94,pas:93,dri:96,def:92,phy:94,div:94,han:93,kic:92,ref:95,pos:93};
+const ACAP={pac:97,sho:94,pas:93,dri:96,def:92,phy:94,div:92,han:92,kic:93,ref:94,pos:92};   // group ceilings; goalkeepers: highest recorded reflexes 94, diving 92, handling 92, kicking 93, positioning 92
 // attribute offsets from the player's overall, per position
 const PROF={
 ST:{pac:0,sho:6,pas:-10,dri:-4,def:-35,phy:0},W:{pac:6,sho:-4,pas:-6,dri:6,def:-35,phy:-8},AM:{pac:-2,sho:-2,pas:6,dri:5,def:-30,phy:-10},
@@ -1689,6 +1689,17 @@ const TRN={acc:.45,spr:.35,fin:1,apo:.8,pwr:.8,lsh:.9,vol:.9,pen:.9,vis:.7,crs:1
 const SSUB={shoff:{fin:.35,pwr:.2,lsh:.2,apo:.15,vol:.1},sotng:{fin:.5,pwr:.2,com:.15,apo:.15},kpx:{vis:.35,spa:.25,crs:.15,lpa:.1,cur:.15},pas:{spa:.45,lpa:.25,vis:.2,cur:.1},pmiss:{spa:.4,lpa:.3,vis:.1,com:.2},
 tk:{stk:.5,slk:.2,awa:.2,agg:.1},bl:{awa:.5,jum:.2,str:.1,itc:.2},ic:{itc:.6,awa:.4},duw:{str:.3,jum:.3,hea:.2,agg:.2},dul:{str:.3,jum:.3,hea:.2,agg:.2},drs:{drb:.35,bco:.25,agi:.2,bal:.1,rea:.1},drf:{drb:.35,bco:.25,agi:.2,bal:.1,rea:.1},
 past:{awa:.4,itc:.3,stk:.3},fd:{agi:.3,bal:.3,drb:.4},off:{spr:.3,acc:.3,apo:.4}};
+/* Realism ceilings: the highest value any player has ever had for each attribute (Mbappé 97 acceleration and sprint speed, Messi 97 ball
+   control and 96 composure, Neymar 96 agility, Kanté 97 stamina, ...). Volleys, penalties, crossing, curve, reactions, balance and heading
+   accuracy were not in the record list and are estimates. Values approach a ceiling gradually (softCap), so only an extreme case gets within
+   a point or two of the record and nobody sits on it for a decade. */
+const SACAP={acc:97,spr:97,fin:95,apo:95,pwr:95,lsh:94,vol:93,pen:92,vis:94,crs:94,fkk:94,spa:94,lpa:93,cur:94,agi:96,bal:95,rea:95,bco:97,drb:96,com:96,itc:92,hea:94,awa:94,stk:93,slk:91,jum:95,sta:97,str:95,agg:95};
+const softCap=(v,cap)=>{const k=cap-10;return v<=k?v:k+10*(1-Math.exp(-(v-k)/10))};
+/* Build: lean frames are quick and agile but weak, power frames are strong, balanced and good in the air and in the tackle but slow and stiff.
+   FRAMEG moves the six groups (it changes the player's profile, not his overall); FRAMES moves the sub-attributes inside the groups. */
+const FRAMEG={'Lean Wire':{pac:4,dri:2,def:-2,phy:-5},'Power Solid':{pac:-4,dri:-2,def:3,phy:5}};
+const FRAMES={'Lean Wire':{acc:5,spr:4,agi:6,bal:-3,str:-8,jum:1,agg:-3,sta:3,hea:-3,stk:-2,slk:-1},'Power Solid':{acc:-5,spr:-4,agi:-6,bal:5,str:8,jum:3,agg:4,sta:-2,hea:3,stk:3,slk:2}};
+const gval=(me,k)=>me.gd?me.gd[k]:me.attr[k];   // a group attribute as shown
 const fLabel=f=>SL[f]||KL[f]||f,fDir=f=>SDIR[f]||DIR[f]||'';
 // ageing of every sub-attribute relative to the player's overall curve, in rating points (0 up to the early teens, where all curves are the same)
 function subAging(me){
@@ -1715,24 +1726,26 @@ function attrAging(me,keys){
 }
 // fills me.sub (the 29 values) and me.subd (how far each is from what is typical for the role and age: training and ageing, which is what the match engine uses)
 function buildSubs(me,A){
-  if(me.pos==='GK'){me.sub=null;me.subd=null;return}
-  const g=subAging(me),pp=SUBP[me.pos]||{},aa=ASUB[me.arch]||ASUB[(typeof ARALIAS!=='undefined'&&ARALIAS[me.arch])||'']||{},sub={},subd={};
+  if(me.pos==='GK'){me.sub=null;me.subd=null;me.gd=null;return}
+  const g=subAging(me),fr=FRAMES[me.frame]||{},pp=SUBP[me.pos]||{},aa=ASUB[me.arch]||ASUB[(typeof ARALIAS!=='undefined'&&ARALIAS[me.arch])||'']||{},sub={},subd={};
   me.smax=me.smax||{};
   for(const[k,l]of GROUPS){
     let Gk=0;for(const j of l)Gk+=SW[j]*g[j];
     let mean=0,meanB=0;const base={},dv={};
-    for(const j of l){base[j]=(pp[j]||0)+(aa[j]||0);dv[j]=((me.sdev&&me.sdev[j])||0)+(g[j]-Gk);mean+=SW[j]*(base[j]+dv[j]);meanB+=SW[j]*base[j]}
+    for(const j of l){base[j]=(pp[j]||0)+(aa[j]||0)+(fr[j]||0);dv[j]=((me.sdev&&me.sdev[j])||0)+(g[j]-Gk);mean+=SW[j]*(base[j]+dv[j]);meanB+=SW[j]*base[j]}
     for(const j of l){
-      const t=base[j]+dv[j]-mean;sub[j]=clamp(Math.round(A[k]+t),15,99);subd[j]=t-(base[j]-meanB);
+      const t=base[j]+dv[j]-mean;sub[j]=clamp(Math.round(softCap(A[k]+t,SACAP[j])),15,SACAP[j]);subd[j]=t-(base[j]-meanB);
       if(sub[j]>(me.smax[j]||0))me.smax[j]=sub[j];
     }
   }
   me.sub=sub;me.subd=subd;
+  // the group as shown: the weighted mean of its capped sub-attributes (the engine keeps using the uncapped group value in me.attr)
+  const gd={};for(const[k,l]of GROUPS)gd[k]=Math.round(l.reduce((t,j)=>t+SW[j]*sub[j],0));me.gd=gd;
 }
 // training: a sub-attribute (or, for goalkeepers, a group attribute). The sub rises by the full amount and lifts its group by its share,
 // so the rest of the group holds still. Pace and agility respond little, passing and finishing a lot; the young and the talented gain more.
 // diminishing returns: the closer a sub-attribute is to the top, the less a season of work adds
-const trainGain=(me,f,amt)=>amt*(TRN[f]||.8)*(me.age<=21?1.3:me.age>=31?.6:1)*(1+.15*clamp(((me.pa||78)-78)/12,-1,1))*(me.sub&&me.sub[f]!=null?clamp((97-me.sub[f])/30,.15,1):1);
+const trainGain=(me,f,amt)=>amt*(TRN[f]||.8)*(me.age<=21?1.3:me.age>=31?.6:1)*(1+.15*clamp(((me.pa||78)-78)/12,-1,1))*(me.sub&&me.sub[f]!=null?clamp(((SACAP[f]||97)-me.sub[f])/30,.15,1):1);
 function trainBoost(me,f,amt){
   const g=SUBG[f];
   if(!g){me.dev[f]=Math.min(12,(me.dev[f]||0)+amt);return}
@@ -2011,13 +2024,12 @@ function refresh(me){
   const keys=me.pos==='GK'?GKK:OUTK,P=PROF[me.pos],AX=archOf(me),ar=AX.att||{},w=OVW[me.pos],off={};
   let sw=0,so=0;
   const ag=attrAging(me,keys);
-  keys.forEach((k,i)=>{off[k]=(P[k]||0)+(ar[k]||0)+(me.dev[k]||0)+(ag[k]||0);sw+=w[i];so+=w[i]*off[k]});
+  keys.forEach((k,i)=>{off[k]=(P[k]||0)+(ar[k]||0)+(me.dev[k]||0)+(ag[k]||0)+((FRAMEG[me.frame]||{})[k]||0);sw+=w[i];so+=w[i]*off[k]});
   const A={};let ov=0;
-  keys.forEach((k,i)=>{A[k]=clamp(Math.round(me.base-so/sw+off[k]),15,ACAP[k]||99);ov+=w[i]*A[k]});
+  keys.forEach((k,i)=>{const rv=me.base-so/sw+off[k];A[k]=clamp(Math.round(me.pos==='GK'?softCap(rv,ACAP[k]||99):rv),15,ACAP[k]||99);ov+=w[i]*A[k]});
   me.attr=A;me.ovr=Math.round(ov/sw);me.peak=Math.max(me.peak||0,me.ovr);
-  me.amax=me.amax||{};for(const k of keys)if(A[k]>(me.amax[k]||0))me.amax[k]=A[k];   // career-best of each attribute: how far the defining one has fallen
- 
   buildSubs(me,A);
+  me.amax=me.amax||{};for(const k of keys){const v=me.gd?me.gd[k]:A[k];if(v>(me.amax[k]||0))me.amax[k]=v}   // career-best of each attribute as shown: how far the defining one has fallen
   // goal and assist share: the group attribute plus how his finishing / vision / passing stand against what is typical for the role
   const sd=me.subd||{};
   me.sc=me.pos==='GK'?0:A.sho-P.sho+.5*(sd.fin||0)+.3*(sd.apo||0)+.2*(sd.com||0);me.ac=me.pos==='GK'?0:A.pas-P.pas+.4*(sd.vis||0)+.3*(sd.spa||0)+.2*(sd.lpa||0)+.1*(sd.cur||0);
@@ -2059,7 +2071,7 @@ function newCareer(o){
   // personal peak shifts in years for the physical, technical and IQ components (see COMPS): negative peaks early, positive late
   me.pks=clamp(Math.round(R(seed+'|pks').norm(0,2.2)*10)/10,-5,5);me.tks=clamp(Math.round(R(seed+'|tks').norm(0,2.2)*10)/10,-5,5);me.iqs=clamp(Math.round(R(seed+'|iqs').norm(0,3.2)*10)/10,-7,7);
   const fp=o.pos==='GK'?'ref':'pac';
-  me.dev=me.frame==='Lean Wire'?{[fp]:2,phy:-2}:me.frame==='Power Solid'?{[fp]:-2,phy:3}:{[fp]:1,phy:1};
+  me.dev=o.pos==='GK'?(me.frame==='Lean Wire'?{[fp]:2,phy:-2}:me.frame==='Power Solid'?{[fp]:-2,phy:3}:{[fp]:1,phy:1}):{};   // outfield builds act through FRAMEG / FRAMES
   me.base=me.pa*fAge(7);   // the early climb is shared by every position
   const season=clamp(Math.round(o.startYear)||DEFAULT_SEASON,FIRST_HIST,DEFAULT_SEASON);
   ST={v:VER,seed,phase:'youth',season,yr0:season-8,W:{pl:[],free:[],clubs:[]},me,pend:null,hof:[],stat:{n:0,g:0,hw:0,dr:0},inbox:[],archive:[],mid:1,bud:2,tour:null};
@@ -3081,7 +3093,7 @@ function reinventOptions(me){
 function reinventCheck(){
   const me=ST.me;if(me.role==='youth'||me.cl<0||me.age<24)return null;
   if(me.reinv!=null&&ST.season-me.reinv<REIN_COOL)return null;
-  const k=mainAttr(me),peak=(me.amax||{})[k]||me.attr[k],now=me.attr[k],drop=peak-now,hurt=me.skillHit!=null&&ST.season-me.skillHit<=1;
+  const k=mainAttr(me),now=gval(me,k),peak=(me.amax||{})[k]||now,drop=peak-now,hurt=me.skillHit!=null&&ST.season-me.skillHit<=1;
   if(drop<REIN_DROP&&!(hurt&&drop>=5))return null;
   const r=reinventOptions(me);if(!r.opts.length)return null;
   const fs=fallenSubs(me).map(([j,d])=>SL[j].toLowerCase()+' (−'+d+')').join(' and ');
@@ -3103,7 +3115,7 @@ function reinvent(i){
   refresh(me);
   // keep every sub-attribute where it was: what the new role makes typical is cancelled by training offsets, so nothing he has changes
   if(oldSub&&me.sub&&me.pos!=='GK'){for(const j of SUBK)me.sdev[j]=Math.round((oldSub[j]-me.sub[j])*10)/10;refresh(me)}
-  me.s0=Object.assign({},me.sub||{});me.role=calcRole();
+  me.amax=Object.assign({},me.gd||me.attr);me.s0=Object.assign({},me.sub||{});me.role=calcRole();
   const nm=fromPos===me.pos?fromArch+' → '+me.arch:fromArch+' ('+fromPos+') → '+me.arch+' ('+me.pos+')';
   logArch('Reinvented: '+nm);
   addMsg('club','Reinvention: '+me.arch,`You are now a ${me.arch}${fromPos===me.pos?'':' ('+POSN[me.pos].toLowerCase()+')'}. Your attributes carry over; it will take a season to settle in. ${archOf(me).blurb}`);
@@ -3675,7 +3687,7 @@ function primeTxt(me){
 }
 // the attribute card: six groups, each opening to its sub-attributes with the career best and a train button
 function vAttrs(me){
-  const A=me.attr,mx=me.amax||{},sm=me.smax||{},tg=me.focus;
+  const A=me.gd||me.attr,mx=me.amax||{},sm=me.smax||{},tg=me.focus;
   if(me.pos==='GK'||!me.sub)return keysOf(me).map(k=>{const d=(mx[k]||A[k])-A[k];return`<div class="row" style="margin:9px 0"><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b><span class="m sm" style="width:30px;text-align:right">${d>=3?'−'+d:''}</span></div>`}).join('');
   return GROUPS.map(([k,l])=>{const d=(mx[k]||A[k])-A[k];
     return`<details class="atg"${tg&&SUBG[tg]===k?' open':''}><summary><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b><span class="m sm" style="width:30px;text-align:right">${d>=3?'−'+d:''}</span></summary>
@@ -3713,7 +3725,7 @@ function vRetired(){
 function focusBtns(){
   const me=ST.me,f=me.focus,note=`<div class="m sm" style="margin:8px 0 14px">${f?esc(fLabel(f))+': '+esc(fDir(f))+(SUBG[f]?' · about +'+trainGain(me,f,me.age<30?3:1.5).toFixed(1)+' this season':''):'One attribute grows faster and earns mastery XP. Pace and agility respond little to training, passing and finishing a lot.'}</div>`;
   if(me.pos==='GK'||!me.sub)return`<div class="row wr">${keysOf(me).map(k=>`<button class="btn alt ${f===k?'on':''}" data-a="focus" data-v="${k}">${KL[k]}</button>`).join('')}</div>${note}`;
-  return GROUPS.map(([g,l])=>`<div class="m sm" style="margin:10px 0 4px">${KL[g]} · <b>${me.attr[g]}</b></div><div class="row wr">${l.map(j=>`<button class="btn alt ${f===j?'on':''}" data-a="focus" data-v="${j}">${SL[j]} <span class="m">${me.sub[j]}</span></button>`).join('')}</div>`).join('')+note;
+  return GROUPS.map(([g,l])=>`<div class="m sm" style="margin:10px 0 4px">${KL[g]} · <b>${gval(me,g)}</b></div><div class="row wr">${l.map(j=>`<button class="btn alt ${f===j?'on':''}" data-a="focus" data-v="${j}">${SL[j]} <span class="m">${me.sub[j]}</span></button>`).join('')}</div>`).join('')+note;
 }
 function vModal(){
   const p=ST.pend,me=ST.me;let h='';
@@ -4407,7 +4419,7 @@ function vAverages(){
   const avg=rn?rs/rn:0,dl=last&&last.avg&&avg?avg-last.avg:null,arrow=d=>d==null?'':`<span class="dl ${d>=0?'up':'dn'}">${d>=0?'↗ +':'↘ '}${d.toFixed(2)}</span>`;
   const cum=k=>{let c=0;return log.map(l=>c+=l[k]||0)};
   const tile=(k,n,sub,sp,extra,badge)=>`<div class="stile">${kk(k)}${badge||''}<span class="n">${n}${extra||''}</span><span class="m">${sub}</span>${sp||''}</div>`;
-  const kl=keysOf(me),A=me.attr;
+  const kl=keysOf(me),A=me.gd||me.attr;
   return G('pad s6',`${ico('⚽','Season averages','Per match')}<div class="grid2">
   ${tile('Goals',g,ap+' games · '+p90(g)+' per 90',lspark(cum('g'),200,46),last&&last.ap?`<span class="dl m">${last.g} last yr</span>`:'')}
   ${tile('Assists',a,ap+' games · '+p90(a)+' per 90',lspark(cum('a'),200,46),last&&last.ap?`<span class="dl m">${last.a} last yr</span>`:'')}

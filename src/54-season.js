@@ -125,7 +125,7 @@ function vAverages(){
   const avg=rn?rs/rn:0,dl=last&&last.avg&&avg?avg-last.avg:null,arrow=d=>d==null?'':`<span class="dl ${d>=0?'up':'dn'}">${d>=0?'↗ +':'↘ '}${d.toFixed(2)}</span>`;
   const cum=k=>{let c=0;return log.map(l=>c+=l[k]||0)};
   const tile=(k,n,sub,sp,extra,badge)=>`<div class="stile">${kk(k)}${badge||''}<span class="n">${n}${extra||''}</span><span class="m">${sub}</span>${sp||''}</div>`;
-  const kl=keysOf(me),A=me.attr;
+  const kl=keysOf(me),A=me.gd||me.attr;
   return G('pad s6',`${ico('⚽','Season averages','Per match')}<div class="grid2">
   ${tile('Goals',g,ap+' games · '+p90(g)+' per 90',lspark(cum('g'),200,46),last&&last.ap?`<span class="dl m">${last.g} last yr</span>`:'')}
   ${tile('Assists',a,ap+' games · '+p90(a)+' per 90',lspark(cum('a'),200,46),last&&last.ap?`<span class="dl m">${last.a} last yr</span>`:'')}

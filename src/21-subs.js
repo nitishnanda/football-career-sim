@@ -42,6 +42,17 @@ const TRN={acc:.45,spr:.35,fin:1,apo:.8,pwr:.8,lsh:.9,vol:.9,pen:.9,vis:.7,crs:1
 const SSUB={shoff:{fin:.35,pwr:.2,lsh:.2,apo:.15,vol:.1},sotng:{fin:.5,pwr:.2,com:.15,apo:.15},kpx:{vis:.35,spa:.25,crs:.15,lpa:.1,cur:.15},pas:{spa:.45,lpa:.25,vis:.2,cur:.1},pmiss:{spa:.4,lpa:.3,vis:.1,com:.2},
 tk:{stk:.5,slk:.2,awa:.2,agg:.1},bl:{awa:.5,jum:.2,str:.1,itc:.2},ic:{itc:.6,awa:.4},duw:{str:.3,jum:.3,hea:.2,agg:.2},dul:{str:.3,jum:.3,hea:.2,agg:.2},drs:{drb:.35,bco:.25,agi:.2,bal:.1,rea:.1},drf:{drb:.35,bco:.25,agi:.2,bal:.1,rea:.1},
 past:{awa:.4,itc:.3,stk:.3},fd:{agi:.3,bal:.3,drb:.4},off:{spr:.3,acc:.3,apo:.4}};
+/* Realism ceilings: the highest value any player has ever had for each attribute (Mbappé 97 acceleration and sprint speed, Messi 97 ball
+   control and 96 composure, Neymar 96 agility, Kanté 97 stamina, ...). Volleys, penalties, crossing, curve, reactions, balance and heading
+   accuracy were not in the record list and are estimates. Values approach a ceiling gradually (softCap), so only an extreme case gets within
+   a point or two of the record and nobody sits on it for a decade. */
+const SACAP={acc:97,spr:97,fin:95,apo:95,pwr:95,lsh:94,vol:93,pen:92,vis:94,crs:94,fkk:94,spa:94,lpa:93,cur:94,agi:96,bal:95,rea:95,bco:97,drb:96,com:96,itc:92,hea:94,awa:94,stk:93,slk:91,jum:95,sta:97,str:95,agg:95};
+const softCap=(v,cap)=>{const k=cap-10;return v<=k?v:k+10*(1-Math.exp(-(v-k)/10))};
+/* Build: lean frames are quick and agile but weak, power frames are strong, balanced and good in the air and in the tackle but slow and stiff.
+   FRAMEG moves the six groups (it changes the player's profile, not his overall); FRAMES moves the sub-attributes inside the groups. */
+const FRAMEG={'Lean Wire':{pac:4,dri:2,def:-2,phy:-5},'Power Solid':{pac:-4,dri:-2,def:3,phy:5}};
+const FRAMES={'Lean Wire':{acc:5,spr:4,agi:6,bal:-3,str:-8,jum:1,agg:-3,sta:3,hea:-3,stk:-2,slk:-1},'Power Solid':{acc:-5,spr:-4,agi:-6,bal:5,str:8,jum:3,agg:4,sta:-2,hea:3,stk:3,slk:2}};
+const gval=(me,k)=>me.gd?me.gd[k]:me.attr[k];   // a group attribute as shown
 const fLabel=f=>SL[f]||KL[f]||f,fDir=f=>SDIR[f]||DIR[f]||'';
 // ageing of every sub-attribute relative to the player's overall curve, in rating points (0 up to the early teens, where all curves are the same)
 function subAging(me){
@@ -68,24 +79,26 @@ function attrAging(me,keys){
 }
 // fills me.sub (the 29 values) and me.subd (how far each is from what is typical for the role and age: training and ageing, which is what the match engine uses)
 function buildSubs(me,A){
-  if(me.pos==='GK'){me.sub=null;me.subd=null;return}
-  const g=subAging(me),pp=SUBP[me.pos]||{},aa=ASUB[me.arch]||ASUB[(typeof ARALIAS!=='undefined'&&ARALIAS[me.arch])||'']||{},sub={},subd={};
+  if(me.pos==='GK'){me.sub=null;me.subd=null;me.gd=null;return}
+  const g=subAging(me),fr=FRAMES[me.frame]||{},pp=SUBP[me.pos]||{},aa=ASUB[me.arch]||ASUB[(typeof ARALIAS!=='undefined'&&ARALIAS[me.arch])||'']||{},sub={},subd={};
   me.smax=me.smax||{};
   for(const[k,l]of GROUPS){
     let Gk=0;for(const j of l)Gk+=SW[j]*g[j];
     let mean=0,meanB=0;const base={},dv={};
-    for(const j of l){base[j]=(pp[j]||0)+(aa[j]||0);dv[j]=((me.sdev&&me.sdev[j])||0)+(g[j]-Gk);mean+=SW[j]*(base[j]+dv[j]);meanB+=SW[j]*base[j]}
+    for(const j of l){base[j]=(pp[j]||0)+(aa[j]||0)+(fr[j]||0);dv[j]=((me.sdev&&me.sdev[j])||0)+(g[j]-Gk);mean+=SW[j]*(base[j]+dv[j]);meanB+=SW[j]*base[j]}
     for(const j of l){
-      const t=base[j]+dv[j]-mean;sub[j]=clamp(Math.round(A[k]+t),15,99);subd[j]=t-(base[j]-meanB);
+      const t=base[j]+dv[j]-mean;sub[j]=clamp(Math.round(softCap(A[k]+t,SACAP[j])),15,SACAP[j]);subd[j]=t-(base[j]-meanB);
       if(sub[j]>(me.smax[j]||0))me.smax[j]=sub[j];
     }
   }
   me.sub=sub;me.subd=subd;
+  // the group as shown: the weighted mean of its capped sub-attributes (the engine keeps using the uncapped group value in me.attr)
+  const gd={};for(const[k,l]of GROUPS)gd[k]=Math.round(l.reduce((t,j)=>t+SW[j]*sub[j],0));me.gd=gd;
 }
 // training: a sub-attribute (or, for goalkeepers, a group attribute). The sub rises by the full amount and lifts its group by its share,
 // so the rest of the group holds still. Pace and agility respond little, passing and finishing a lot; the young and the talented gain more.
 // diminishing returns: the closer a sub-attribute is to the top, the less a season of work adds
-const trainGain=(me,f,amt)=>amt*(TRN[f]||.8)*(me.age<=21?1.3:me.age>=31?.6:1)*(1+.15*clamp(((me.pa||78)-78)/12,-1,1))*(me.sub&&me.sub[f]!=null?clamp((97-me.sub[f])/30,.15,1):1);
+const trainGain=(me,f,amt)=>amt*(TRN[f]||.8)*(me.age<=21?1.3:me.age>=31?.6:1)*(1+.15*clamp(((me.pa||78)-78)/12,-1,1))*(me.sub&&me.sub[f]!=null?clamp(((SACAP[f]||97)-me.sub[f])/30,.15,1):1);
 function trainBoost(me,f,amt){
   const g=SUBG[f];
   if(!g){me.dev[f]=Math.min(12,(me.dev[f]||0)+amt);return}

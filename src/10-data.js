@@ -23,7 +23,7 @@ const OUTK=['pac','sho','pas','dri','def','phy'],GKK=['div','han','kic','ref','p
 const KL={pac:'Pace',sho:'Shooting',pas:'Passing',dri:'Dribbling',def:'Defending',phy:'Physical',div:'Diving',han:'Handling',kic:'Kicking',ref:'Reflexes',pos:'Positioning'};
 // realistic ceilings per attribute (no gold-card 99s) -- pace is the only one that gets near 99,
 // everything else tops out the way it does on a real top-end base card
-const ACAP={pac:97,sho:94,pas:93,dri:96,def:92,phy:94,div:94,han:93,kic:92,ref:95,pos:93};
+const ACAP={pac:97,sho:94,pas:93,dri:96,def:92,phy:94,div:92,han:92,kic:93,ref:94,pos:92};   // group ceilings; goalkeepers: highest recorded reflexes 94, diving 92, handling 92, kicking 93, positioning 92
 // attribute offsets from the player's overall, per position
 const PROF={
 ST:{pac:0,sho:6,pas:-10,dri:-4,def:-35,phy:0},W:{pac:6,sho:-4,pas:-6,dri:6,def:-35,phy:-8},AM:{pac:-2,sho:-2,pas:6,dri:5,def:-30,phy:-10},

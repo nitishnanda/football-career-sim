@@ -61,7 +61,7 @@ function reinventOptions(me){
 function reinventCheck(){
   const me=ST.me;if(me.role==='youth'||me.cl<0||me.age<24)return null;
   if(me.reinv!=null&&ST.season-me.reinv<REIN_COOL)return null;
-  const k=mainAttr(me),peak=(me.amax||{})[k]||me.attr[k],now=me.attr[k],drop=peak-now,hurt=me.skillHit!=null&&ST.season-me.skillHit<=1;
+  const k=mainAttr(me),now=gval(me,k),peak=(me.amax||{})[k]||now,drop=peak-now,hurt=me.skillHit!=null&&ST.season-me.skillHit<=1;
   if(drop<REIN_DROP&&!(hurt&&drop>=5))return null;
   const r=reinventOptions(me);if(!r.opts.length)return null;
   const fs=fallenSubs(me).map(([j,d])=>SL[j].toLowerCase()+' (−'+d+')').join(' and ');
@@ -83,7 +83,7 @@ function reinvent(i){
   refresh(me);
   // keep every sub-attribute where it was: what the new role makes typical is cancelled by training offsets, so nothing he has changes
   if(oldSub&&me.sub&&me.pos!=='GK'){for(const j of SUBK)me.sdev[j]=Math.round((oldSub[j]-me.sub[j])*10)/10;refresh(me)}
-  me.s0=Object.assign({},me.sub||{});me.role=calcRole();
+  me.amax=Object.assign({},me.gd||me.attr);me.s0=Object.assign({},me.sub||{});me.role=calcRole();
   const nm=fromPos===me.pos?fromArch+' → '+me.arch:fromArch+' ('+fromPos+') → '+me.arch+' ('+me.pos+')';
   logArch('Reinvented: '+nm);
   addMsg('club','Reinvention: '+me.arch,`You are now a ${me.arch}${fromPos===me.pos?'':' ('+POSN[me.pos].toLowerCase()+')'}. Your attributes carry over; it will take a season to settle in. ${archOf(me).blurb}`);

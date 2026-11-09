@@ -342,7 +342,7 @@ function primeTxt(me){
 }
 // the attribute card: six groups, each opening to its sub-attributes with the career best and a train button
 function vAttrs(me){
-  const A=me.attr,mx=me.amax||{},sm=me.smax||{},tg=me.focus;
+  const A=me.gd||me.attr,mx=me.amax||{},sm=me.smax||{},tg=me.focus;
   if(me.pos==='GK'||!me.sub)return keysOf(me).map(k=>{const d=(mx[k]||A[k])-A[k];return`<div class="row" style="margin:9px 0"><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b><span class="m sm" style="width:30px;text-align:right">${d>=3?'−'+d:''}</span></div>`}).join('');
   return GROUPS.map(([k,l])=>{const d=(mx[k]||A[k])-A[k];
     return`<details class="atg"${tg&&SUBG[tg]===k?' open':''}><summary><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b><span class="m sm" style="width:30px;text-align:right">${d>=3?'−'+d:''}</span></summary>
@@ -380,7 +380,7 @@ function vRetired(){
 function focusBtns(){
   const me=ST.me,f=me.focus,note=`<div class="m sm" style="margin:8px 0 14px">${f?esc(fLabel(f))+': '+esc(fDir(f))+(SUBG[f]?' · about +'+trainGain(me,f,me.age<30?3:1.5).toFixed(1)+' this season':''):'One attribute grows faster and earns mastery XP. Pace and agility respond little to training, passing and finishing a lot.'}</div>`;
   if(me.pos==='GK'||!me.sub)return`<div class="row wr">${keysOf(me).map(k=>`<button class="btn alt ${f===k?'on':''}" data-a="focus" data-v="${k}">${KL[k]}</button>`).join('')}</div>${note}`;
-  return GROUPS.map(([g,l])=>`<div class="m sm" style="margin:10px 0 4px">${KL[g]} · <b>${me.attr[g]}</b></div><div class="row wr">${l.map(j=>`<button class="btn alt ${f===j?'on':''}" data-a="focus" data-v="${j}">${SL[j]} <span class="m">${me.sub[j]}</span></button>`).join('')}</div>`).join('')+note;
+  return GROUPS.map(([g,l])=>`<div class="m sm" style="margin:10px 0 4px">${KL[g]} · <b>${gval(me,g)}</b></div><div class="row wr">${l.map(j=>`<button class="btn alt ${f===j?'on':''}" data-a="focus" data-v="${j}">${SL[j]} <span class="m">${me.sub[j]}</span></button>`).join('')}</div>`).join('')+note;
 }
 function vModal(){
   const p=ST.pend,me=ST.me;let h='';
