@@ -314,7 +314,7 @@ function R(key){
   };
 }
 
-const VER=15;
+const VER=16;
 const NTOP=5,CO=['England','Spain','Germany','Italy','France'];
 const CUPN={England:'FA Cup',Spain:'Copa del Rey',Germany:'DFB-Pokal',Italy:'Coppa Italia',France:'Coupe de France'};
 // REAL (data/world.json, built from Wikipedia) is injected by the build: divisions, clubs, managers, grounds, players
@@ -1412,7 +1412,7 @@ function mkComp(pk,pw,a,b){
   for(let age=22;age<=43;age++){
     if(age<pk){const t=(age-21)/(pk-21);c[age-7]=f21+(1-f21)*(1-(1-t)*(1-t))}
     else if(age<=pk+pw)c[age-7]=1;
-    else{loss+=a+b*i++;c[age-7]=Math.max(.3,1-loss)}
+    else{loss+=Math.min(.04,a+b*i++);c[age-7]=Math.max(.3,1-loss)}   // a component never loses more than 4% of its peak in a year
   }
   return c;
 }
@@ -1442,6 +1442,17 @@ const fOf=(p,a)=>fAge(a,p.pos,p.arch,shiftsOf(p));
 // output relative to ability: how much more (or less) a player produces than his ability alone says, at his age
 function outRatio(p,a){const w=mixOf(p.pos,p.arch),sh=shiftsOf(p);return curveAt(w,a,sh,SMUL)/curveAt(w,a,sh)}
 const ovrAt=(pa,age,dv,p)=>clamp(Math.round(pa*fOf(p,age)+dv),25,98);
+/* Attribute-level aging. Each attribute follows its own mix of the three components, so pace and strength fade first while passing,
+   positioning and shot selection hold up. attrAging gives each attribute's offset, in rating points, against what the player's overall
+   curve alone would say (zero up to 21, where all components are the same curve). refresh() adds it before re-centring, so the overall
+   rating is untouched: a 33-year-old winger loses pace and keeps his passing, he does not lose points of overall twice. */
+const ATTC={pac:[1,0,0],phy:[1,0,0],dri:[.35,.65,0],sho:[0,.65,.35],pas:[0,.5,.5],def:[.45,0,.55],div:[.6,.4,0],han:[0,1,0],kic:[0,.5,.5],ref:[1,0,0],pos:[0,0,1]};
+function attrAging(me,keys){
+  const sh=shiftsOf(me),w=mixOf(me.pos,me.arch),a=me.age,o={};
+  let raw=0;for(let c=0;c<3;c++)raw+=w[c]*compAt(c,a,sh[c]);
+  for(const k of keys){const m=ATTC[k]||[.33,.34,.33];let s=0;for(let c=0;c<3;c++)s+=m[c]*compAt(c,a,sh[c]);o[k]=me.base*(s/raw-1)}
+  return o;
+}
 // peak windows for the tile: the years each component is within 1% of its best, and the years output is within 1% of its best
 function peakWindows(p){
   const sh=shiftsOf(p),w=mixOf(p.pos,p.arch),win=fn=>{let m=0;for(let a=16;a<=43;a++)m=Math.max(m,fn(a));let lo=null,hi=null;for(let a=16;a<=43;a++)if(fn(a)>=m*.99){if(lo==null)lo=a;hi=a}return[lo,hi]};
@@ -1885,10 +1896,13 @@ const table=lg=>sortT(ST.W.clubs.filter(c=>c.lg===lg));
 function refresh(me){
   const keys=me.pos==='GK'?GKK:OUTK,P=PROF[me.pos],AX=archOf(me),ar=AX.att||{},w=OVW[me.pos],off={};
   let sw=0,so=0;
-  keys.forEach((k,i)=>{off[k]=(P[k]||0)+(ar[k]||0)+(me.dev[k]||0);sw+=w[i];so+=w[i]*off[k]});
+  const ag=attrAging(me,keys);
+  keys.forEach((k,i)=>{off[k]=(P[k]||0)+(ar[k]||0)+(me.dev[k]||0)+(ag[k]||0);sw+=w[i];so+=w[i]*off[k]});
   const A={};let ov=0;
-  keys.forEach((k,i)=>{A[k]=clamp(Math.round(me.base-so/sw+off[k]),1,ACAP[k]||99);ov+=w[i]*A[k]});
+  keys.forEach((k,i)=>{A[k]=clamp(Math.round(me.base-so/sw+off[k]),15,ACAP[k]||99);ov+=w[i]*A[k]});
   me.attr=A;me.ovr=Math.round(ov/sw);me.peak=Math.max(me.peak||0,me.ovr);
+  me.amax=me.amax||{};for(const k of keys)if(A[k]>(me.amax[k]||0))me.amax[k]=A[k];   // career-best of each attribute: how far the defining one has fallen
+ 
   me.sc=me.pos==='GK'?0:A.sho-P.sho;me.ac=me.pos==='GK'?0:A.pas-P.pas;
   me.p={id:'me',n:me.name,age:me.age,arch:me.arch,pks:me.pks||0,tks:me.tks||0,iqs:me.iqs||0,pos:me.pos,ovr:me.ovr,sc:me.sc,ac:me.ac,gm:AX.gm||1,am:AX.am||1};
 }
@@ -1900,7 +1914,7 @@ function develop(boost){
   me.age++;
   me.gap=clamp(me.gap*.75+g.norm(0,1.5)+boost,-9,3);
   me.base=me.pa*fOf(me,me.age)*archAge(me,me.age)+me.gap;
-  if(me.age>=30){const k=me.pos==='GK'?'ref':'pac';me.dev[k]=(me.dev[k]||0)-.9-(me.pos==='GK'?0:(archOf(me).pd||0))}
+  // (the old flat pace decline from 30 is gone: attributes now age through attrAging, by component)
   refresh(me);
 }
 function roleAt(c,o){
@@ -2065,7 +2079,7 @@ function mkReport(res,kind,lab,hc,ac,pl){
     if(pl.red){me.sus=1;r.red=1}
     if(pl.inj){
       me.inj=pl.inj.w+1;r.inj=pl.inj;addMsg('medical','Injury: '+pl.inj.t,'Expected to be out for about '+pl.inj.w+' week'+(pl.inj.w>1?'s':'')+'.');
-      if(pl.inj.w>=16){const k=me.pos==='GK'?'ref':'pac';me.dev[k]=(me.dev[k]||0)-2;refresh(me)}
+      if(pl.inj.w>=12)injuryCost(me,pl.inj);
     }
   }
   ST.mineLog.push({c:lab,o:sd?hc.name:ac.name,h:sd?0:1,gf,ga,rt:res.me?res.me.rating:null,g:res.me?res.me.g:0,a:res.me?res.me.a:0,m:pl.mode,mn:res.me?res.me.min:0,wk:r.wk});
@@ -2193,7 +2207,7 @@ function finishSeason(){
   if(me.age>=27)boost*=.4;
   develop(boost);
   const bdo=rows.slice(0,10).map(r=>({n:r.n,c:club(r.c).name,pos:r.pos,sc:Math.round(r.sc),me:r.me?1:0,fk:r.fk||0}));
-  ST.pend={t:'season',s:lab,H,bdo,rank,aw,hon,row,rev:0,opts:makeOffers(avg||RAVG)};
+  ST.pend={t:'season',s:lab,H,bdo,rank,aw,hon,row,rev:0,avg:avg||RAVG,rein:reinventCheck(),opts:makeOffers(avg||RAVG)};
 }
 
 /* ---------- offers, moves, retirement ---------- */
@@ -2887,6 +2901,83 @@ function managerReview(mid){
   }
 }
 
+/* Reinvention. A player is built around one defining attribute (pace for a Pace Abuser, dribbling for a Flashy Winger, shooting for a
+   Poacher...). When age or a bad injury takes enough of it away, the player can reinvent himself: keep playing the position in a different
+   style, or move to a neighbouring one, using what he still has. Switching keeps his real attributes (a ball-winner who becomes a regista
+   still has the same tackling and passing), recomputes his overall for the new role, adds a short adaptation penalty, and puts him on the
+   new archetype's ageing curve, which is how a pace-dependent winger buys himself extra years as a creator or a finisher. */
+const REIN_DROP=8,REIN_COOL=4;   // points below his career-best defining attribute; seasons before he is asked again
+function mainAttr(me){
+  const att=archOf(me).att||{},keys=me.pos==='GK'?GKK:OUTK;let b=null;
+  for(const k of keys)if(att[k]!=null&&(b==null||att[k]>att[b]))b=k;
+  return b||keys[0];
+}
+// a long injury always costs a little pace (reflexes for a keeper); the worst ones can also take lasting damage to what the player is built on
+function injuryCost(me,inj){
+  const w=inj.w,g=R(ST.seed+'|P|injcost|'+ST.season+'|'+me.age+'|'+w),main=mainAttr(me),base=me.pos==='GK'?'ref':'pac';
+  me.dev[base]=(me.dev[base]||0)-(w>=24?3:2);
+  if(g.chance(w>=24?.6:w>=16?.35:.12)){
+    const loss=Math.max(2,Math.round(g.norm(w>=24?7:4.5,1.5)));
+    me.dev[main]=(me.dev[main]||0)-loss;me.gap=clamp(me.gap-loss*.35,-9,3);me.skillHit=ST.season;
+    addMsg('medical','Lasting damage: '+KL[main],`The ${inj.t.toLowerCase()} has left its mark. The medical staff expect your ${KL[main].toLowerCase()} to stay down by around ${loss} points, and your game may need to change with it.`);
+  }
+  refresh(me);
+}
+// what his current attributes are worth in a role, and how that role's ageing curve treats him over the next three years
+function reinventOptions(me){
+  const A=me.attr,fam=me.pos==='GK',keysOf_=p=>p==='GK'?GKK:OUTK,sh=shiftsOf(me),age=me.age;
+  const proj=(pos,arch,ovr)=>{const w=mixOf(pos,arch),n=curveAt(w,age,sh);return ovr*curveAt(w,age+3,sh)/Math.max(.3,n)};
+  const stay=proj(me.pos,me.arch,me.ovr),by={};
+  for(const pos of[me.pos].concat(DON[me.pos]||[])){
+    if(!ARX[pos]||(pos==='GK')!==fam)continue;
+    const keys=keysOf_(pos),w=OVW[pos];let sw=0,so=0;keys.forEach((k,i)=>{sw+=w[i];so+=w[i]*(A[k]||0)});
+    const mean=keys.reduce((s,k)=>s+(A[k]||0),0)/keys.length;
+    for(const arch of Object.keys(ARX[pos])){
+      if(pos===me.pos&&arch===me.arch)continue;
+      const att=ARX[pos][arch].att||{};let fit=0,tot=0;for(const k of keys){fit+=(att[k]||0)*((A[k]||0)-mean);tot+=Math.abs(att[k]||0)}
+      fit/=Math.max(1,tot);
+      const pen=pos===me.pos?1:2.5,ovr=Math.round(so/sw-pen),p3=Math.round(proj(pos,arch,ovr)),score=.5*ovr+.5*p3+fit*.4;
+      if(!by[pos]||score>by[pos].score)by[pos]={pos,arch,ovr,p3,pen,fit:Math.round(fit*10)/10,score};
+    }
+  }
+  const out=Object.values(by).filter(o=>o.ovr>=me.ovr-7&&o.p3>=Math.round(stay)-1).sort((a,b)=>b.score-a.score).slice(0,3);
+  for(const o of out){const w=mixOf(o.pos,o.arch),sh2=sh;let m=0,lo=null,hi=null;for(let a=18;a<=40;a++)m=Math.max(m,curveAt(w,a,sh2,SMUL));for(let a=18;a<=40;a++)if(curveAt(w,a,sh2,SMUL)>=m*.99){if(lo==null)lo=a;hi=a}o.st=[lo,hi]}
+  return{opts:out,stay:Math.round(stay)};
+}
+// run at the end of a season: has the defining attribute fallen far enough (or an injury taken enough) that he should be offered a new role?
+function reinventCheck(){
+  const me=ST.me;if(me.role==='youth'||me.cl<0||me.age<24)return null;
+  if(me.reinv!=null&&ST.season-me.reinv<REIN_COOL)return null;
+  const k=mainAttr(me),peak=(me.amax||{})[k]||me.attr[k],now=me.attr[k],drop=peak-now,hurt=me.skillHit!=null&&ST.season-me.skillHit<=1;
+  if(drop<REIN_DROP&&!(hurt&&drop>=5))return null;
+  const r=reinventOptions(me);if(!r.opts.length)return null;
+  return{k,peak,now,drop,hurt,opts:r.opts,stay:r.stay,arch:me.arch,pos:me.pos,age:me.age,
+    title:'Time to reinvent your game',body:(hurt?'The injury has taken something you relied on. ':'Age is taking something you relied on. ')+KL[k]+' is down from '+peak+' to '+now+'.'};
+}
+function reinvent(i){
+  const rn=ST.pend&&ST.pend.rein,me=ST.me;if(!rn||!rn.opts[i])return;
+  const o=rn.opts[i],A=Object.assign({},me.attr),fromPos=me.pos,fromArch=me.arch;
+  me.pos=o.pos;me.arch=o.arch;me.archHidden=0;me.focus=null;me.dev={};
+  const keys=me.pos==='GK'?GKK:OUTK,w=OVW[me.pos],P=PROF[me.pos],ar=archOf(me).att||{};
+  let sw=0,so=0;keys.forEach((k,j)=>{sw+=w[j];so+=w[j]*(A[k]||0)});
+  const nov=so/sw,pen=o.pen,F=fOf(me,me.age);
+  me.pa=Math.round(Math.min(110,Math.max(nov,nov/F))*10)/10;me.gap=clamp(Math.round((nov-pen-me.pa*F)*10)/10,-9,3);
+  me.base=me.pa*F+me.gap;
+  const ag=attrAging(me,keys);
+  keys.forEach(k=>{me.dev[k]=Math.round(((A[k]||0)-nov-(P[k]||0)-(ar[k]||0)-(ag[k]||0))*10)/10});
+  me.amax=Object.assign({},A);me.reinv=ST.season;me.skillHit=null;
+  refresh(me);me.role=calcRole();
+  const nm=fromPos===me.pos?fromArch+' → '+me.arch:fromArch+' ('+fromPos+') → '+me.arch+' ('+me.pos+')';
+  logArch('Reinvented: '+nm);
+  addMsg('club','Reinvention: '+me.arch,`You are now a ${me.arch}${fromPos===me.pos?'':' ('+POSN[me.pos].toLowerCase()+')'}. Your attributes carry over; it will take a season to settle in. ${archOf(me).blurb}`);
+  ST.pend.rein=null;
+  if(ST.pend.avg!=null)ST.pend.opts=makeOffers(ST.pend.avg);
+}
+function reinventDecline(){
+  const rn=ST.pend&&ST.pend.rein;if(!rn)return;
+  ST.me.reinv=ST.season;logArch('Stuck with the '+ST.me.arch+' game');ST.pend.rein=null;
+}
+
 /* Trophy vector registry. Each trophy is a standalone SVG "component": TrophyXxx({size=64,className}) -> SVG string.
    size is the rendered height in px (width follows the artwork's aspect ratio). Every gradient / clip / filter id is
    prefixed per trophy ("ucl-", "wc-", ...) so many trophies can sit in one cabinet without clashing. */
@@ -3178,7 +3269,7 @@ function vCreate(){
 }
 
 /* ---------- shared bits ---------- */
-function unread(){return ST.inbox.filter(m=>!m.seen).length+(ST.pend&&ST.pend.t==='season'?ST.pend.opts.filter(o=>!o.rej&&!o.seen).length:0)}
+function unread(){return ST.inbox.filter(m=>!m.seen).length+(ST.pend&&ST.pend.t==='season'?ST.pend.opts.filter(o=>!o.rej&&!o.seen).length+(ST.pend.rein&&!ST.pend.rein.seen?1:0):0)}
 function vBanner(){
   const p=ST.pend;if(!p||p.t!=='season'||!p.rev||(TAB==='home'&&DT==='inbox'))return'';
   return`<div class="banner glass pad"><div class="row sp wr"><div><b>Season ${p.s} is over.</b> <span class="m">Decisions are waiting in your inbox before the next season starts.</span></div><button class="btn sm" data-a="goinbox">Review options →</button></div></div>`;
@@ -3380,6 +3471,7 @@ function cupStatus(lg){
 /* ---------- inbox ---------- */
 function inboxItems(){
   const out=[],p=ST.pend&&ST.pend.t==='season'?ST.pend:null;
+  if(p&&p.rein)out.push({key:'rein',kind:'reinvent',m:p.rein,rein:p.rein,title:p.rein.title,sub:p.rein.body,tag:'REINVENTION',s:label(ST.season)});
   if(p)p.opts.forEach((o,i)=>{
     if(o.rej)return;const con=o.k==='stay'||o.k==='keep'||o.k==='return'||o.k==='retire',c=o.c!=null?club(o.c):null;
     out.push({key:'o'+i,kind:con?'contract':'offer',i,o,title:o.k==='retire'?'Retirement':(o.k==='loan'?'Loan: ':o.k==='transfer'?(o.free?'Free transfer: ':''):o.k==='return'?'Return: ':o.k==='keep'?'Stay on your deal: ':'Extension: ')+c.name+(o.cur?' ('+o.y+' yr'+(o.y>1?'s':'')+' left)':''),sub:o.k==='retire'?'Hang up your boots.':ROLEN[o.role]+' · €'+o.w+'k/wk'+(o.fee?' · '+euro(o.fee):''),tag:o.k==='transfer'?'TRANSFER OFFER':o.k==='loan'?'LOAN OFFER':o.k==='retire'?'CAREER':'CONTRACT',s:'now'});
@@ -3405,6 +3497,17 @@ function vOffer(it){
   <div class="tile mt row sp wr"><div><b>Seek manager consultation</b><br><span class="m sm">Discuss your long-term roadmap with ${esc(mgr(club(me.parent>=0?me.parent:me.cl)))} before agreeing. Costs 1 decision.</span></div><button class="btn alt sm" data-a="cons" ${ST.bud<1?'disabled':''}>Request meeting</button></div>
   <div class="row wr mt2" style="justify-content:flex-end">${o.k==='stay'||o.k==='keep'||o.k==='return'?'':`<button class="btn bad" data-a="rej" data-v="${it.i}">Reject offer</button>`}${o.k==='transfer'&&o.sell!=='ok'&&!o.asked?`<button class="btn alt" data-a="ask" data-v="${it.i}" ${ST.bud<1?'disabled':''}>Hand in transfer request</button>`:''}${o.bids&&!o.maxed&&o.bi<o.bids.length-1?`<button class="btn alt" data-a="push" data-v="${it.i}" ${ST.bud<1?'disabled':''}>Ask agent for a higher bid</button>`:''}<button class="btn alt" data-a="ctr" data-v="${it.i}" ${ST.bud<1||o.cnt?'disabled':''}>${o.cnt?'Wage counter used':'Negotiate wages'}</button><button class="btn" data-a="acc" data-v="${it.i}" ${o.k==='transfer'&&o.sell!=='ok'?'disabled':''}>Accept & enter talks →</button></div>`);
 }
+function vReinvent(r){
+  const me=ST.me,W=a=>a[0]+'-'+a[1],cur=peakWindows(me).st;
+  const card=(o,i)=>`<div class="tile mt"><div class="row sp wr"><div><span class="pill hot">${esc(POSN[o.pos])}</span> <b style="font-size:19px">${esc(o.arch)}</b><br>${kk(o.pos===me.pos?'Same position, new style':'Move from '+POSN[me.pos].toLowerCase())}</div><button class="btn" data-a="rein" data-v="${i}">Switch to this role</button></div>
+    <div class="grid mt" style="grid-template-columns:repeat(3,1fr)"><div class="tile">${kk('Overall now')}<b class="n">${o.ovr}</b><span class="m sm">${o.ovr-me.ovr>=0?'+':''}${o.ovr-me.ovr} (adapting: -${o.pen})</span></div><div class="tile">${kk('In 3 years')}<b class="n">~${o.p3}</b><span class="m sm">${o.p3>=r.stay?'+':''}${o.p3-r.stay} vs staying</span></div><div class="tile">${kk('Output peak')}<b class="n">${W(o.st)}</b><span class="m sm">${o.fit>=0?'Suits your attributes':'A stretch for your attributes'}</span></div></div>
+    <div class="m sm mt">${esc(ARX[o.pos][o.arch].blurb)}</div></div>`;
+  return G('pad',`<span class="pill hot">REINVENTION</span> ${kk(label(ST.season))}<h1>${esc(r.title)}</h1><p>${esc(r.body)}</p>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr)"><div class="tile">${kk(KL[r.k]+' (career best)')}<b class="n">${r.peak}</b></div><div class="tile">${kk(KL[r.k]+' now')}<b class="n">${r.now}</b><span class="m sm">down ${r.drop}</span></div><div class="tile">${kk('Staying a '+esc(r.arch))}<b class="n">~${r.stay}</b><span class="m sm">overall in 3 years, output peak ${W(cur)}</span></div></div>
+  <p class="m sm mt">Your attributes carry over: a new role is built from what you still have. You will need a season to settle, so the overall shown is a little lower to start.</p>
+  ${r.opts.map(card).join('')}
+  <div class="row wr mt2" style="justify-content:flex-end"><button class="btn alt" data-a="reinx">Stick with my game</button></div>`);
+}
 function vInbox(){
   const items=inboxItems(),F=INB.f,cnt=k=>items.filter(i=>i.kind===k).length,list=F==='all'?items:items.filter(i=>i.kind===F);
   const sel=items.find(i=>i.key===INB.sel)||list[0]||items[0];if(sel&&sel.m&&!sel.m.seen)sel.m.seen=1;if(sel&&sel.o)sel.o.seen=1;
@@ -3416,6 +3519,7 @@ function vInbox(){
   ${INB.log?`<div class="mt sm m">${ST.archive.slice(0,30).map(a=>`<div style="padding:4px 0;border-top:1px solid rgba(255,255,255,.06)">${a.s} · ${esc(a.t)}</div>`).join('')||'Empty'}</div>`:''}`)}`;
   let right;
   if(!sel)right=G('empty','No messages yet. Offers arrive at the end of each season.');
+  else if(sel.rein)right=vReinvent(sel.rein);
   else if(sel.o)right=vOffer(sel);
   else right=G('pad',`<span class="pill hot">${sel.tag}</span> ${kk(sel.s)}<h1>${esc(sel.title)}</h1><p>${esc(sel.m.body)}</p>`);
   return`<div class="inbox"><div>${left}</div><div>${p&&p.rev?`<div class="note" style="margin:0 0 12px"><button class="btn alt sm" data-a="revb">View season review</button> <span class="m">You must pick an option to start the next season.</span></div>`:''}${right}</div></div>`;
@@ -3435,7 +3539,7 @@ function primeTxt(me){
 function vCareer(){
   const me=ST.me,A=me.attr,v=mval(),wt=Math.round((me.ht-100)*WMUL[me.frame||'Athletic']);
   return`<div class="g12">${G('pad s4',`<div class="row" style="gap:16px"><div class="ovr-ring" style="--p:${me.ovr}"><b>${me.ovr}</b></div><div><b style="font-size:20px">${esc(me.name)}</b><br>${kk(POSN[me.pos]+' · '+archName(me))}<br><span class="sm">${stars(me.pa)}</span> <span class="m sm">${esc(me.tier)}</span></div></div>
-  <div class="mt">${keysOf(me).map(k=>`<div class="row" style="margin:9px 0"><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b></div>`).join('')}</div>
+  <div class="mt">${keysOf(me).map(k=>`<div class="row" style="margin:9px 0"><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b><span class="m sm" style="width:30px;text-align:right" title="Career best ${(me.amax||{})[k]||A[k]}">${((me.amax||{})[k]||A[k])-A[k]>=3?'−'+(((me.amax||{})[k]||A[k])-A[k]):''}</span></div>`).join('')}</div>
   <div class="tile mt sm"><div class="row sp"><span class="m">Frame</span><span>${me.frame||'Athletic'} · ${me.ht} cm · ${wt} kg</span></div><div class="row sp"><span class="m">Foot</span><span>${me.foot} · weak foot ${'★'.repeat(me.wf||3)}</span></div><div class="row sp"><span class="m">Nationality</span><span>${esc(me.nat)}</span></div></div>`)}
   <div class="s8" style="display:grid;gap:16px">${G('pad',`<h2>Contract & value</h2><div class="grid"><div class="tile">${kk('Value')}<b class="n">${euro(v)}</b></div><div class="tile">${kk('Wage / wk')}<b class="n">${me.ct?'€'+me.ct.w+'k':'-'}</b></div><div class="tile">${kk('Expires')}<b class="n">${me.ct?me.ct.exp:'-'}</b></div><div class="tile">${kk('Peak OVR')}<b class="n">${me.peak}</b></div>${primeTxt(me).map(r=>`<div class="tile">${kk(r[0]+' peak')}<b class="n">${r[1]}</b><span class="m sm">${r[2]}</span></div>`).join('')}</div></div>${me.moves.length?`<div class="m sm mt">${me.moves.map(m=>`${m.s}: ${m.k==='loan'?'loan':m.k==='return'?'returned':'moved'} ${esc(m.from)} → ${esc(m.to)}`).join('<br>')}</div>`:''}`)}
   ${G('pad',`<h2>National team ${kk(esc(me.nat))}</h2><div class="grid"><div class="tile">${kk('Status')}<b class="n" style="font-size:19px">${me.nr==='starter'?'First choice':me.nr==='squad'?'In the squad':me.age<16?'Not eligible yet':'Not selected'}</b></div><div class="tile">${kk('Caps')}<b class="n">${me.caps}</b></div><div class="tile">${kk('Goals')}<b class="n">${me.ig}</b></div><div class="tile">${kk('Assists')}<b class="n">${me.ina||0}</b></div><div class="tile">${kk('Avg rating')}<b class="n">${me.natRn?(me.natRs/me.natRn).toFixed(2):'-'}</b></div><div class="tile">${kk('Tournaments won')}<b class="n">${me.hon.filter(h=>h.t==='World Cup'||h.t==='European Championship').length}</b></div></div>`)}
@@ -4314,6 +4418,7 @@ function upgradeSave(){
     for(const p of W.pl){if(!p)continue;shiftsOf(p);p.pa=Math.round(p.pa*oldF(p.age)/fOf(p,p.age)*10)/10;delete p.sks}
     notes.push('separate physical, technical and IQ peaks');
   }
+  if(!me.amax)me.amax=Object.assign({},me.attr);
   if(me.pks==null)me.pks=0;if(me.tks==null)me.tks=0;if(me.iqs==null)me.iqs=0;delete me.sks;
   let wages=0;
   for(const p of W.pl){if(!p)continue;
@@ -4372,6 +4477,7 @@ const ACT={
   log:()=>{INB.log=INB.log?0:1},
   acc:d=>{applyOffer(+d.v);TAB='home';DT='games';INB.sel=null},
   rej:d=>{rejectOffer(+d.v);INB.sel=null},
+  rein:d=>{reinvent(+d.v);INB.sel=null},reinx:()=>{reinventDecline();INB.sel=null},
   ctr:d=>counterOffer(+d.v),
   cons:()=>consult(),push:d=>pushBid(+d.v),ask:d=>askLeave(+d.v),
   reset:()=>{if(confirm('Start a new career? This one stays saved and you can load it again from Saves.')){save();ST=null;SLOT=null;UIM=null}},

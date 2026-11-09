@@ -13,10 +13,13 @@ const table=lg=>sortT(ST.W.clubs.filter(c=>c.lg===lg));
 function refresh(me){
   const keys=me.pos==='GK'?GKK:OUTK,P=PROF[me.pos],AX=archOf(me),ar=AX.att||{},w=OVW[me.pos],off={};
   let sw=0,so=0;
-  keys.forEach((k,i)=>{off[k]=(P[k]||0)+(ar[k]||0)+(me.dev[k]||0);sw+=w[i];so+=w[i]*off[k]});
+  const ag=attrAging(me,keys);
+  keys.forEach((k,i)=>{off[k]=(P[k]||0)+(ar[k]||0)+(me.dev[k]||0)+(ag[k]||0);sw+=w[i];so+=w[i]*off[k]});
   const A={};let ov=0;
-  keys.forEach((k,i)=>{A[k]=clamp(Math.round(me.base-so/sw+off[k]),1,ACAP[k]||99);ov+=w[i]*A[k]});
+  keys.forEach((k,i)=>{A[k]=clamp(Math.round(me.base-so/sw+off[k]),15,ACAP[k]||99);ov+=w[i]*A[k]});
   me.attr=A;me.ovr=Math.round(ov/sw);me.peak=Math.max(me.peak||0,me.ovr);
+  me.amax=me.amax||{};for(const k of keys)if(A[k]>(me.amax[k]||0))me.amax[k]=A[k];   // career-best of each attribute: how far the defining one has fallen
+ 
   me.sc=me.pos==='GK'?0:A.sho-P.sho;me.ac=me.pos==='GK'?0:A.pas-P.pas;
   me.p={id:'me',n:me.name,age:me.age,arch:me.arch,pks:me.pks||0,tks:me.tks||0,iqs:me.iqs||0,pos:me.pos,ovr:me.ovr,sc:me.sc,ac:me.ac,gm:AX.gm||1,am:AX.am||1};
 }
@@ -28,7 +31,7 @@ function develop(boost){
   me.age++;
   me.gap=clamp(me.gap*.75+g.norm(0,1.5)+boost,-9,3);
   me.base=me.pa*fOf(me,me.age)*archAge(me,me.age)+me.gap;
-  if(me.age>=30){const k=me.pos==='GK'?'ref':'pac';me.dev[k]=(me.dev[k]||0)-.9-(me.pos==='GK'?0:(archOf(me).pd||0))}
+  // (the old flat pace decline from 30 is gone: attributes now age through attrAging, by component)
   refresh(me);
 }
 function roleAt(c,o){
@@ -193,7 +196,7 @@ function mkReport(res,kind,lab,hc,ac,pl){
     if(pl.red){me.sus=1;r.red=1}
     if(pl.inj){
       me.inj=pl.inj.w+1;r.inj=pl.inj;addMsg('medical','Injury: '+pl.inj.t,'Expected to be out for about '+pl.inj.w+' week'+(pl.inj.w>1?'s':'')+'.');
-      if(pl.inj.w>=16){const k=me.pos==='GK'?'ref':'pac';me.dev[k]=(me.dev[k]||0)-2;refresh(me)}
+      if(pl.inj.w>=12)injuryCost(me,pl.inj);
     }
   }
   ST.mineLog.push({c:lab,o:sd?hc.name:ac.name,h:sd?0:1,gf,ga,rt:res.me?res.me.rating:null,g:res.me?res.me.g:0,a:res.me?res.me.a:0,m:pl.mode,mn:res.me?res.me.min:0,wk:r.wk});
@@ -321,7 +324,7 @@ function finishSeason(){
   if(me.age>=27)boost*=.4;
   develop(boost);
   const bdo=rows.slice(0,10).map(r=>({n:r.n,c:club(r.c).name,pos:r.pos,sc:Math.round(r.sc),me:r.me?1:0,fk:r.fk||0}));
-  ST.pend={t:'season',s:lab,H,bdo,rank,aw,hon,row,rev:0,opts:makeOffers(avg||RAVG)};
+  ST.pend={t:'season',s:lab,H,bdo,rank,aw,hon,row,rev:0,avg:avg||RAVG,rein:reinventCheck(),opts:makeOffers(avg||RAVG)};
 }
 
 /* ---------- offers, moves, retirement ---------- */

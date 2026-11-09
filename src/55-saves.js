@@ -75,6 +75,7 @@ function upgradeSave(){
     for(const p of W.pl){if(!p)continue;shiftsOf(p);p.pa=Math.round(p.pa*oldF(p.age)/fOf(p,p.age)*10)/10;delete p.sks}
     notes.push('separate physical, technical and IQ peaks');
   }
+  if(!me.amax)me.amax=Object.assign({},me.attr);
   if(me.pks==null)me.pks=0;if(me.tks==null)me.tks=0;if(me.iqs==null)me.iqs=0;delete me.sks;
   let wages=0;
   for(const p of W.pl){if(!p)continue;

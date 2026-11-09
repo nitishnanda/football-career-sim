@@ -73,7 +73,7 @@ function vCreate(){
 }
 
 /* ---------- shared bits ---------- */
-function unread(){return ST.inbox.filter(m=>!m.seen).length+(ST.pend&&ST.pend.t==='season'?ST.pend.opts.filter(o=>!o.rej&&!o.seen).length:0)}
+function unread(){return ST.inbox.filter(m=>!m.seen).length+(ST.pend&&ST.pend.t==='season'?ST.pend.opts.filter(o=>!o.rej&&!o.seen).length+(ST.pend.rein&&!ST.pend.rein.seen?1:0):0)}
 function vBanner(){
   const p=ST.pend;if(!p||p.t!=='season'||!p.rev||(TAB==='home'&&DT==='inbox'))return'';
   return`<div class="banner glass pad"><div class="row sp wr"><div><b>Season ${p.s} is over.</b> <span class="m">Decisions are waiting in your inbox before the next season starts.</span></div><button class="btn sm" data-a="goinbox">Review options →</button></div></div>`;
@@ -275,6 +275,7 @@ function cupStatus(lg){
 /* ---------- inbox ---------- */
 function inboxItems(){
   const out=[],p=ST.pend&&ST.pend.t==='season'?ST.pend:null;
+  if(p&&p.rein)out.push({key:'rein',kind:'reinvent',m:p.rein,rein:p.rein,title:p.rein.title,sub:p.rein.body,tag:'REINVENTION',s:label(ST.season)});
   if(p)p.opts.forEach((o,i)=>{
     if(o.rej)return;const con=o.k==='stay'||o.k==='keep'||o.k==='return'||o.k==='retire',c=o.c!=null?club(o.c):null;
     out.push({key:'o'+i,kind:con?'contract':'offer',i,o,title:o.k==='retire'?'Retirement':(o.k==='loan'?'Loan: ':o.k==='transfer'?(o.free?'Free transfer: ':''):o.k==='return'?'Return: ':o.k==='keep'?'Stay on your deal: ':'Extension: ')+c.name+(o.cur?' ('+o.y+' yr'+(o.y>1?'s':'')+' left)':''),sub:o.k==='retire'?'Hang up your boots.':ROLEN[o.role]+' · €'+o.w+'k/wk'+(o.fee?' · '+euro(o.fee):''),tag:o.k==='transfer'?'TRANSFER OFFER':o.k==='loan'?'LOAN OFFER':o.k==='retire'?'CAREER':'CONTRACT',s:'now'});
@@ -300,6 +301,17 @@ function vOffer(it){
   <div class="tile mt row sp wr"><div><b>Seek manager consultation</b><br><span class="m sm">Discuss your long-term roadmap with ${esc(mgr(club(me.parent>=0?me.parent:me.cl)))} before agreeing. Costs 1 decision.</span></div><button class="btn alt sm" data-a="cons" ${ST.bud<1?'disabled':''}>Request meeting</button></div>
   <div class="row wr mt2" style="justify-content:flex-end">${o.k==='stay'||o.k==='keep'||o.k==='return'?'':`<button class="btn bad" data-a="rej" data-v="${it.i}">Reject offer</button>`}${o.k==='transfer'&&o.sell!=='ok'&&!o.asked?`<button class="btn alt" data-a="ask" data-v="${it.i}" ${ST.bud<1?'disabled':''}>Hand in transfer request</button>`:''}${o.bids&&!o.maxed&&o.bi<o.bids.length-1?`<button class="btn alt" data-a="push" data-v="${it.i}" ${ST.bud<1?'disabled':''}>Ask agent for a higher bid</button>`:''}<button class="btn alt" data-a="ctr" data-v="${it.i}" ${ST.bud<1||o.cnt?'disabled':''}>${o.cnt?'Wage counter used':'Negotiate wages'}</button><button class="btn" data-a="acc" data-v="${it.i}" ${o.k==='transfer'&&o.sell!=='ok'?'disabled':''}>Accept & enter talks →</button></div>`);
 }
+function vReinvent(r){
+  const me=ST.me,W=a=>a[0]+'-'+a[1],cur=peakWindows(me).st;
+  const card=(o,i)=>`<div class="tile mt"><div class="row sp wr"><div><span class="pill hot">${esc(POSN[o.pos])}</span> <b style="font-size:19px">${esc(o.arch)}</b><br>${kk(o.pos===me.pos?'Same position, new style':'Move from '+POSN[me.pos].toLowerCase())}</div><button class="btn" data-a="rein" data-v="${i}">Switch to this role</button></div>
+    <div class="grid mt" style="grid-template-columns:repeat(3,1fr)"><div class="tile">${kk('Overall now')}<b class="n">${o.ovr}</b><span class="m sm">${o.ovr-me.ovr>=0?'+':''}${o.ovr-me.ovr} (adapting: -${o.pen})</span></div><div class="tile">${kk('In 3 years')}<b class="n">~${o.p3}</b><span class="m sm">${o.p3>=r.stay?'+':''}${o.p3-r.stay} vs staying</span></div><div class="tile">${kk('Output peak')}<b class="n">${W(o.st)}</b><span class="m sm">${o.fit>=0?'Suits your attributes':'A stretch for your attributes'}</span></div></div>
+    <div class="m sm mt">${esc(ARX[o.pos][o.arch].blurb)}</div></div>`;
+  return G('pad',`<span class="pill hot">REINVENTION</span> ${kk(label(ST.season))}<h1>${esc(r.title)}</h1><p>${esc(r.body)}</p>
+  <div class="grid" style="grid-template-columns:repeat(3,1fr)"><div class="tile">${kk(KL[r.k]+' (career best)')}<b class="n">${r.peak}</b></div><div class="tile">${kk(KL[r.k]+' now')}<b class="n">${r.now}</b><span class="m sm">down ${r.drop}</span></div><div class="tile">${kk('Staying a '+esc(r.arch))}<b class="n">~${r.stay}</b><span class="m sm">overall in 3 years, output peak ${W(cur)}</span></div></div>
+  <p class="m sm mt">Your attributes carry over: a new role is built from what you still have. You will need a season to settle, so the overall shown is a little lower to start.</p>
+  ${r.opts.map(card).join('')}
+  <div class="row wr mt2" style="justify-content:flex-end"><button class="btn alt" data-a="reinx">Stick with my game</button></div>`);
+}
 function vInbox(){
   const items=inboxItems(),F=INB.f,cnt=k=>items.filter(i=>i.kind===k).length,list=F==='all'?items:items.filter(i=>i.kind===F);
   const sel=items.find(i=>i.key===INB.sel)||list[0]||items[0];if(sel&&sel.m&&!sel.m.seen)sel.m.seen=1;if(sel&&sel.o)sel.o.seen=1;
@@ -311,6 +323,7 @@ function vInbox(){
   ${INB.log?`<div class="mt sm m">${ST.archive.slice(0,30).map(a=>`<div style="padding:4px 0;border-top:1px solid rgba(255,255,255,.06)">${a.s} · ${esc(a.t)}</div>`).join('')||'Empty'}</div>`:''}`)}`;
   let right;
   if(!sel)right=G('empty','No messages yet. Offers arrive at the end of each season.');
+  else if(sel.rein)right=vReinvent(sel.rein);
   else if(sel.o)right=vOffer(sel);
   else right=G('pad',`<span class="pill hot">${sel.tag}</span> ${kk(sel.s)}<h1>${esc(sel.title)}</h1><p>${esc(sel.m.body)}</p>`);
   return`<div class="inbox"><div>${left}</div><div>${p&&p.rev?`<div class="note" style="margin:0 0 12px"><button class="btn alt sm" data-a="revb">View season review</button> <span class="m">You must pick an option to start the next season.</span></div>`:''}${right}</div></div>`;
@@ -330,7 +343,7 @@ function primeTxt(me){
 function vCareer(){
   const me=ST.me,A=me.attr,v=mval(),wt=Math.round((me.ht-100)*WMUL[me.frame||'Athletic']);
   return`<div class="g12">${G('pad s4',`<div class="row" style="gap:16px"><div class="ovr-ring" style="--p:${me.ovr}"><b>${me.ovr}</b></div><div><b style="font-size:20px">${esc(me.name)}</b><br>${kk(POSN[me.pos]+' · '+archName(me))}<br><span class="sm">${stars(me.pa)}</span> <span class="m sm">${esc(me.tier)}</span></div></div>
-  <div class="mt">${keysOf(me).map(k=>`<div class="row" style="margin:9px 0"><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b></div>`).join('')}</div>
+  <div class="mt">${keysOf(me).map(k=>`<div class="row" style="margin:9px 0"><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b><span class="m sm" style="width:30px;text-align:right" title="Career best ${(me.amax||{})[k]||A[k]}">${((me.amax||{})[k]||A[k])-A[k]>=3?'−'+(((me.amax||{})[k]||A[k])-A[k]):''}</span></div>`).join('')}</div>
   <div class="tile mt sm"><div class="row sp"><span class="m">Frame</span><span>${me.frame||'Athletic'} · ${me.ht} cm · ${wt} kg</span></div><div class="row sp"><span class="m">Foot</span><span>${me.foot} · weak foot ${'★'.repeat(me.wf||3)}</span></div><div class="row sp"><span class="m">Nationality</span><span>${esc(me.nat)}</span></div></div>`)}
   <div class="s8" style="display:grid;gap:16px">${G('pad',`<h2>Contract & value</h2><div class="grid"><div class="tile">${kk('Value')}<b class="n">${euro(v)}</b></div><div class="tile">${kk('Wage / wk')}<b class="n">${me.ct?'€'+me.ct.w+'k':'-'}</b></div><div class="tile">${kk('Expires')}<b class="n">${me.ct?me.ct.exp:'-'}</b></div><div class="tile">${kk('Peak OVR')}<b class="n">${me.peak}</b></div>${primeTxt(me).map(r=>`<div class="tile">${kk(r[0]+' peak')}<b class="n">${r[1]}</b><span class="m sm">${r[2]}</span></div>`).join('')}</div></div>${me.moves.length?`<div class="m sm mt">${me.moves.map(m=>`${m.s}: ${m.k==='loan'?'loan':m.k==='return'?'returned':'moved'} ${esc(m.from)} → ${esc(m.to)}`).join('<br>')}</div>`:''}`)}
   ${G('pad',`<h2>National team ${kk(esc(me.nat))}</h2><div class="grid"><div class="tile">${kk('Status')}<b class="n" style="font-size:19px">${me.nr==='starter'?'First choice':me.nr==='squad'?'In the squad':me.age<16?'Not eligible yet':'Not selected'}</b></div><div class="tile">${kk('Caps')}<b class="n">${me.caps}</b></div><div class="tile">${kk('Goals')}<b class="n">${me.ig}</b></div><div class="tile">${kk('Assists')}<b class="n">${me.ina||0}</b></div><div class="tile">${kk('Avg rating')}<b class="n">${me.natRn?(me.natRs/me.natRn).toFixed(2):'-'}</b></div><div class="tile">${kk('Tournaments won')}<b class="n">${me.hon.filter(h=>h.t==='World Cup'||h.t==='European Championship').length}</b></div></div>`)}

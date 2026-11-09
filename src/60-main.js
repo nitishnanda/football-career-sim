@@ -37,6 +37,7 @@ const ACT={
   log:()=>{INB.log=INB.log?0:1},
   acc:d=>{applyOffer(+d.v);TAB='home';DT='games';INB.sel=null},
   rej:d=>{rejectOffer(+d.v);INB.sel=null},
+  rein:d=>{reinvent(+d.v);INB.sel=null},reinx:()=>{reinventDecline();INB.sel=null},
   ctr:d=>counterOffer(+d.v),
   cons:()=>consult(),push:d=>pushBid(+d.v),ask:d=>askLeave(+d.v),
   reset:()=>{if(confirm('Start a new career? This one stays saved and you can load it again from Saves.')){save();ST=null;SLOT=null;UIM=null}},

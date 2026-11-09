@@ -15,7 +15,7 @@ function mkComp(pk,pw,a,b){
   for(let age=22;age<=43;age++){
     if(age<pk){const t=(age-21)/(pk-21);c[age-7]=f21+(1-f21)*(1-(1-t)*(1-t))}
     else if(age<=pk+pw)c[age-7]=1;
-    else{loss+=a+b*i++;c[age-7]=Math.max(.3,1-loss)}
+    else{loss+=Math.min(.04,a+b*i++);c[age-7]=Math.max(.3,1-loss)}   // a component never loses more than 4% of its peak in a year
   }
   return c;
 }
@@ -45,6 +45,17 @@ const fOf=(p,a)=>fAge(a,p.pos,p.arch,shiftsOf(p));
 // output relative to ability: how much more (or less) a player produces than his ability alone says, at his age
 function outRatio(p,a){const w=mixOf(p.pos,p.arch),sh=shiftsOf(p);return curveAt(w,a,sh,SMUL)/curveAt(w,a,sh)}
 const ovrAt=(pa,age,dv,p)=>clamp(Math.round(pa*fOf(p,age)+dv),25,98);
+/* Attribute-level aging. Each attribute follows its own mix of the three components, so pace and strength fade first while passing,
+   positioning and shot selection hold up. attrAging gives each attribute's offset, in rating points, against what the player's overall
+   curve alone would say (zero up to 21, where all components are the same curve). refresh() adds it before re-centring, so the overall
+   rating is untouched: a 33-year-old winger loses pace and keeps his passing, he does not lose points of overall twice. */
+const ATTC={pac:[1,0,0],phy:[1,0,0],dri:[.35,.65,0],sho:[0,.65,.35],pas:[0,.5,.5],def:[.45,0,.55],div:[.6,.4,0],han:[0,1,0],kic:[0,.5,.5],ref:[1,0,0],pos:[0,0,1]};
+function attrAging(me,keys){
+  const sh=shiftsOf(me),w=mixOf(me.pos,me.arch),a=me.age,o={};
+  let raw=0;for(let c=0;c<3;c++)raw+=w[c]*compAt(c,a,sh[c]);
+  for(const k of keys){const m=ATTC[k]||[.33,.34,.33];let s=0;for(let c=0;c<3;c++)s+=m[c]*compAt(c,a,sh[c]);o[k]=me.base*(s/raw-1)}
+  return o;
+}
 // peak windows for the tile: the years each component is within 1% of its best, and the years output is within 1% of its best
 function peakWindows(p){
   const sh=shiftsOf(p),w=mixOf(p.pos,p.arch),win=fn=>{let m=0;for(let a=16;a<=43;a++)m=Math.max(m,fn(a));let lo=null,hi=null;for(let a=16;a<=43;a++)if(fn(a)>=m*.99){if(lo==null)lo=a;hi=a}return[lo,hi]};
