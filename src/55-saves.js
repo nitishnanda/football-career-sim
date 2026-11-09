@@ -75,6 +75,7 @@ function upgradeSave(){
     for(const p of W.pl){if(!p)continue;shiftsOf(p);p.pa=Math.round(p.pa*oldF(p.age)/fOf(p,p.age)*10)/10;delete p.sks}
     notes.push('separate physical, technical and IQ peaks');
   }
+  if(!me.sdev)me.sdev={};
   if(!me.amax)me.amax=Object.assign({},me.attr);
   if(me.pks==null)me.pks=0;if(me.tks==null)me.tks=0;if(me.iqs==null)me.iqs=0;delete me.sks;
   let wages=0;
@@ -91,6 +92,7 @@ function upgradeSave(){
     setupSeason();S.me.role=calcRole();S.pend={t:'train'};
     notes.push('the new cup and European formats (this season restarts from matchday 1)');
   }
+  refresh(me);if(!me.s0)me.s0=Object.assign({},me.sub||{});   // builds the sub-attributes for saves from before they existed
   if(S._from&&S._from<VER||notes.length)addMsg('club','Game updated',notes.length?'Your save was brought up to date: '+notes.join(', ')+'. Your career history is unchanged.':'Your save was brought up to date. Nothing in your career changed.');
   delete S._from;
 }

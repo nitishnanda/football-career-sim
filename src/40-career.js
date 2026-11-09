@@ -20,14 +20,17 @@ function refresh(me){
   me.attr=A;me.ovr=Math.round(ov/sw);me.peak=Math.max(me.peak||0,me.ovr);
   me.amax=me.amax||{};for(const k of keys)if(A[k]>(me.amax[k]||0))me.amax[k]=A[k];   // career-best of each attribute: how far the defining one has fallen
  
-  me.sc=me.pos==='GK'?0:A.sho-P.sho;me.ac=me.pos==='GK'?0:A.pas-P.pas;
+  buildSubs(me,A);
+  // goal and assist share: the group attribute plus how his finishing / vision / passing stand against what is typical for the role
+  const sd=me.subd||{};
+  me.sc=me.pos==='GK'?0:A.sho-P.sho+.5*(sd.fin||0)+.3*(sd.apo||0)+.2*(sd.com||0);me.ac=me.pos==='GK'?0:A.pas-P.pas+.4*(sd.vis||0)+.3*(sd.spa||0)+.2*(sd.lpa||0)+.1*(sd.cur||0);
   me.p={id:'me',n:me.name,age:me.age,arch:me.arch,pks:me.pks||0,tks:me.tks||0,iqs:me.iqs||0,pos:me.pos,ovr:me.ovr,sc:me.sc,ac:me.ac,gm:AX.gm||1,am:AX.am||1};
 }
 function mval(){const me=ST.me;return valueFor(me.ovr,me.age,me.pa,me.cl>=0?club(me.cl):null)}
 // end-of-season growth; also ages the player a year
 function develop(boost){
   const me=ST.me,g=R(ST.seed+'|P|dev|'+me.age);
-  if(me.focus){me.dev[me.focus]=Math.min(12,(me.dev[me.focus]||0)+(me.age<30?1.6:.8));me.focus=null}
+  if(me.focus){trainBoost(me,me.focus,me.age<30?3:1.5);me.focus=null}
   me.age++;
   me.gap=clamp(me.gap*.75+g.norm(0,1.5)+boost,-9,3);
   me.base=me.pa*fOf(me,me.age)*archAge(me,me.age)+me.gap;
@@ -54,7 +57,7 @@ function newCareer(o){
   const t=o.tier==='random'||o.tier==null?TIERS[g.wpick([0,1,2,3],i=>[.45,.35,.17,.03][i])]:TIERS[+o.tier];
   const pa=clamp(g.norm(t.m,t.s),66,98);
   let arch=o.arch,hid=0;if(!arch||arch==='random'||!ARX[o.pos][arch]){arch=g.pick(Object.keys(ARX[o.pos]));hid=o.arch==='random'?1:0}
-  const me={name:o.name||'Player',nat:o.nat||'England',pos:o.pos,arch,archHidden:hid,foot:o.foot||'Right',ht:o.ht||180,pa:Math.round(pa*10)/10,tier:t.n,age:7,gap:0,dev:{},base:0,cl:-1,parent:-1,role:'youth',form:[],inj:0,sus:0,rows:[],hon:[],aw:[],moves:[],focus:null,ss:null,trust:60,caps:0,ig:0,nr:null,tx:{},a0:null,tn:0,wf:o.foot==='Both'?5:3,frame:o.frame||'Athletic'};
+  const me={name:o.name||'Player',nat:o.nat||'England',pos:o.pos,arch,archHidden:hid,foot:o.foot||'Right',ht:o.ht||180,pa:Math.round(pa*10)/10,tier:t.n,age:7,gap:0,dev:{},sdev:{},base:0,cl:-1,parent:-1,role:'youth',form:[],inj:0,sus:0,rows:[],hon:[],aw:[],moves:[],focus:null,ss:null,trust:60,caps:0,ig:0,nr:null,tx:{},a0:null,tn:0,wf:o.foot==='Both'?5:3,frame:o.frame||'Athletic'};
   me.brk=rollBrk(g,o.pos,t.n);
   // personal peak shifts in years for the physical, technical and IQ components (see COMPS): negative peaks early, positive late
   me.pks=clamp(Math.round(R(seed+'|pks').norm(0,2.2)*10)/10,-5,5);me.tks=clamp(Math.round(R(seed+'|tks').norm(0,2.2)*10)/10,-5,5);me.iqs=clamp(Math.round(R(seed+'|iqs').norm(0,3.2)*10)/10,-7,7);
@@ -129,7 +132,7 @@ function setupSeason(){
     const gy=R(ST.seed+'|L|yopp|'+ST.season),mc=club(ST.me.cl),opps=gy.shuffle(W.clubs.filter(x=>x.id!==mc.id&&LGN[x.lg].country===LGN[mc.lg].country&&LGN[x.lg].tier<=3).map(x=>x.id));
     let k=0;for(const sl of ST.slots)if(sl.t==='yth')ST.yopp[sl.w]=opps[k++%opps.length];
   }
-  const me=ST.me;me.ss={lg:z0(),cup:z0(),eu:z0(),yth:z0(),nat:z0()};me.a0=Object.assign({},me.attr);
+  const me=ST.me;me.ss={lg:z0(),cup:z0(),eu:z0(),yth:z0(),nat:z0()};me.a0=Object.assign({},me.attr);me.s0=Object.assign({},me.sub||{});
   const nr=natRole();if(nr&&!me.nr)addMsg('national','Senior call-up: '+me.nat,'The '+me.nat+' manager has included you in the squad for the coming internationals.');
   me.nr=nr;
 }
@@ -185,7 +188,7 @@ function mkReport(res,kind,lab,hc,ac,pl){
     s.g+=m.g;s.a+=m.a;s.mn+=m.min;s.rs+=m.rating;s.rn++;s.sh+=m.sh;s.pc+=m.pc;s.pa+=m.pa;
     m.xg=Math.round((.08*m.sh+.06*m.sot)*100)/100;m.xa=Math.round(.11*m.kp*100)/100;s.kp+=m.kp;s.xg+=m.xg;s.xa+=m.xa;s.dr=(s.dr||0)+m.dr;s.tk=(s.tk||0)+m.tk;for(const k of['ic','bl','du','duw','dra','past','fd','fc','sv','yc','sot'])s[k]=(s[k]||0)+(m[k]||0);
     me.trust=clamp((me.trust||60)+(m.rating-RAVG)*1.6+(pl.mode==='start'?.3:0),5,99);
-    if(me.focus){const x=me.tx[me.focus]=me.tx[me.focus]||{xp:0,t:1};x.xp+=20*m.min/90;if(x.xp>=1000){x.xp-=1000;x.t++;me.dev[me.focus]=(me.dev[me.focus]||0)+1.2;refresh(me);addMsg('club','Training tier '+x.t+' unlocked',KL[me.focus]+' mastery has improved.')}}
+    if(me.focus){const x=me.tx[me.focus]=me.tx[me.focus]||{xp:0,t:1};x.xp+=20*m.min/90;if(x.xp>=1000){x.xp-=1000;x.t++;trainBoost(me,me.focus,2.4);refresh(me);addMsg('club','Training tier '+x.t+' unlocked',fLabel(me.focus)+' mastery has improved.')}}
     if(kind==='nat'){
       me.caps++;me.ig+=m.g;me.ina=(me.ina||0)+m.a;me.natRs=(me.natRs||0)+m.rating;me.natRn=(me.natRn||0)+1;
       if(me.nr==='squad')me.natSquadApps=(me.natSquadApps||0)+1;

@@ -25,7 +25,7 @@ const ACT={
   opendiv:d=>{LGV=+d.v;LT='table';UIM=null;TAB='league'},
   compact:()=>{COMPACT=!COMPACT},
   brk:()=>{BRK=!BRK},
-  focus:d=>{ST.me.focus=d.v},
+  focus:d=>{ST.me.focus=d.v},trg:d=>{TRG=d.v},
   cont:()=>closePend(),
   plan:()=>{UIM='plan'},gear:()=>{UIM='gear'},closem:()=>{UIM=null},export:exportSave,
   acad:d=>{ST.pend.sel=+d.v},

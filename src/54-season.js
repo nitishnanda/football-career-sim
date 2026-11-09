@@ -1,5 +1,11 @@
 /* Season page (hero + match report + dashboard cards) and header, per the UI guide. */
-let DT='games';
+let DT='games',TRG=null;
+// training focus picker: six groups, then the sub-attributes of the selected one (goalkeepers keep their six)
+function trainRow(me){
+  if(me.pos==='GK'||!me.sub)return seg(keysOf(me).map(k=>[k,KL[k]]),me.focus||keysOf(me)[0],'focus');
+  const g=TRG||(me.focus&&SUBG[me.focus])||'sho';
+  return seg(GROUPS.map(([k])=>[k,KL[k]]),g,'trg')+'<div style="margin-top:8px">'+seg(GROUPS.find(x=>x[0]===g)[1].map(j=>[j,SL[j]]),me.focus,'focus')+'</div>';
+}
 const lspark=(v,w,h)=>{
   if(v.length<2)return'';const lo=Math.min(...v),hi=Math.max(...v),r=hi-lo||1,x=i=>i/(v.length-1)*(w-8)+4,y=a=>h-5-(a-lo)/r*(h-10);
   return`<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${v.map((a,i)=>x(i).toFixed(1)+','+y(a).toFixed(1)).join(' ')}"/></svg>`;
@@ -51,7 +57,7 @@ function vSeasonHero(){
   <div class="rec"><span class="no">#${shirt(me)}</span><div class="box">${kk(rc2)}<b>${t.w}-${t.d}-${t.l}</b>${kk(t.p+' pts · '+(t.gf-t.ga>0?'+':'')+(t.gf-t.ga)+' GD')}</div>${avgBox}${lastBox}</div>
   ${fm?`<div class="fchips">${kk('Form')} ${fm}</div>`:''}
   <div style="margin-top:14px"><div class="prog"><span>${lbl}</span><span>Matchday ${pl} / ${md} · ${pct}%</span></div><div class="track"><i style="width:${pct}%"></i></div></div>
-  <div style="margin-top:12px">${kk('Training focus · switch any time')}<div style="margin-top:8px">${seg(keysOf(me).map(k=>[k,KL[k]]),f,'focus')}</div><div class="m" style="margin-top:8px">${esc(DIR[f]||'')}</div></div>
+  <div style="margin-top:12px">${kk('Training focus · switch any time')}<div style="margin-top:8px">${trainRow(me)}</div><div class="m" style="margin-top:8px">${esc(me.focus?fLabel(me.focus)+': '+fDir(me.focus):'Pick what to work on this season')}</div></div>
   <div class="actbar"><button class="btn xl" data-a="next">▶ Sim next match</button><button class="btn alt" data-a="blk">⏭ Sim to review</button><button class="btn alt sm" data-a="chunk" data-n="3">Sim 3</button><button class="btn alt sm" data-a="chunk" data-n="10">Sim 10</button><button class="btn alt sm" data-a="ssn">Skip season »</button></div>
   ${me.inj>0?`<div class="warn">Injured: about ${me.inj} more matchday${me.inj>1?'s':''} out.</div>`:''}${ST.note?`<div class="warn">${esc(ST.note)}</div>`:''}`);
 }

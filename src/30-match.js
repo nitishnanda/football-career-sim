@@ -102,7 +102,7 @@ function genStats(me,min,gl,as,gf,ga,lt,lo,gm,pl,poss,act,gcOn){
   const pos=me.pos,A=me.attr,P=PROF[pos],AX=archOf(me);
   if(!RM){const r=rate(pos,me.ovr,gl,as,gf,ga,0,min);return{min,g:gl,a:as,ga,sh:gl,sot:gl,kp:as,pa:0,pc:0,tk:0,ic:0,dr:0,sv:0,rating:r}}
   // effective quality per stat: the relevant attribute measured against the position's profile (what an average player of this overall would have)
-  const q=s=>{const k=pos==='GK'?(GATT[s]||'pos'):SATT[s];const a=A[k];if(a==null)return me.ovr;return me.ovr+(a-((P[k]||0)+me.ovr))};
+  const q=s=>{const k=pos==='GK'?(GATT[s]||'pos'):SATT[s];let a=A[k];if(a==null)return me.ovr;if(pos!=='GK')a+=subAdj(me,s);return me.ovr+(a-((P[k]||0)+me.ovr))};
   const f=simLine(gm,pos,min,gl,as,gf,ga,poss==null?.5:poss,lo/1.35,q,AX.ex,AX.vol,pl&&pl.red,gcOn);
   const s={min:act||min,reg:min,g:gl,a:as,ga,sh:f.shoff+f.sotng+gl,sot:f.sotng+gl,kp:f.kpx+as,pa:f.pas,pc:f.pas-f.pmiss,tk:f.tk,ic:f.ic,dr:f.drs,dra:f.drs+f.drf,bl:f.bl,du:f.duw+f.dul,duw:f.duw,past:f.past,fd:f.fd,fc:f.fc,sv:f.sv,yc:f.yc};
   s.rating=clamp(Math.round((ratingOf(pos,f,gm)+(AX.ro||0)*(min>=60?1:min/60))*10)/10,3,10);s.f=f;return s;

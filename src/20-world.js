@@ -50,7 +50,8 @@ const ovrAt=(pa,age,dv,p)=>clamp(Math.round(pa*fOf(p,age)+dv),25,98);
    curve alone would say (zero up to 21, where all components are the same curve). refresh() adds it before re-centring, so the overall
    rating is untouched: a 33-year-old winger loses pace and keeps his passing, he does not lose points of overall twice. */
 const ATTC={pac:[1,0,0],phy:[1,0,0],dri:[.35,.65,0],sho:[0,.65,.35],pas:[0,.5,.5],def:[.45,0,.55],div:[.6,.4,0],han:[0,1,0],kic:[0,.5,.5],ref:[1,0,0],pos:[0,0,1]};
-function attrAging(me,keys){
+// goalkeepers keep group-level attributes (reflexes, diving, handling, kicking, positioning): their ageing, by component
+function gkAging(me,keys){
   const sh=shiftsOf(me),w=mixOf(me.pos,me.arch),a=me.age,o={};
   let raw=0;for(let c=0;c<3;c++)raw+=w[c]*compAt(c,a,sh[c]);
   for(const k of keys){const m=ATTC[k]||[.33,.34,.33];let s=0;for(let c=0;c<3;c++)s+=m[c]*compAt(c,a,sh[c]);o[k]=me.base*(s/raw-1)}

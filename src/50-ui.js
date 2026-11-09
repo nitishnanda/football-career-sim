@@ -155,15 +155,15 @@ function vRadar(){
 }
 function vTrain(){
   const me=ST.me,A=me.attr,f=me.focus,x=f&&me.tx[f]?me.tx[f]:{xp:0,t:1},a0=me.a0||A;
-  const ch=keysOf(me).map(k=>[k,A[k],A[k]-(a0[k]||A[k])]).sort((p,q)=>Math.abs(q[2])-Math.abs(p[2])||q[1]-p[1]).slice(0,3);
+  const sb=me.sub&&me.pos!=='GK',s0=me.s0||{},ch=(sb?SUBK:keysOf(me)).map(k=>sb?[k,me.sub[k],me.sub[k]-(s0[k]||me.sub[k])]:[k,A[k],A[k]-(a0[k]||A[k])]).sort((p,q)=>Math.abs(q[2])-Math.abs(p[2])||q[1]-p[1]).slice(0,3);
   const tr=me.trust||60,tl=tr>=90?'Untouchable':tr>=75?'Key man':tr>=60?'Trusted':tr>=40?'Neutral':'Doubtful',mc=cond();
   const hc=club(me.parent>=0?me.parent:me.cl);
   return G('pad s4',`<h2>Training regime ${kk('tier '+x.t)}</h2>
-  <div class="tile"><div class="row sp">${kk('Active directive')}<span class="mono sm">${f?'+'+(me.age<30?1.6:.8)+' at season end':'none set'}</span></div><b style="font-size:17px">${f?KL[f]+': '+DIR[f]:'Pick a focus below'}</b>
+  <div class="tile"><div class="row sp">${kk('Active directive')}<span class="mono sm">${f?'+'+(SUBG[f]?trainGain(me,f,me.age<30?3:1.5).toFixed(1):(me.age<30?1.6:.8))+' at season end':'none set'}</span></div><b style="font-size:17px">${f?fLabel(f)+': '+fDir(f):'Pick a focus below'}</b>
   <div class="row sp mt">${kk('Mastery experience')}<span class="mono sm">${Math.round(x.xp)} / 1,000 XP</span></div><div class="bar" style="margin-top:6px"><i style="width:${x.xp/10}%"></i></div>
   <div class="row sp sm m mt">${x.t>1?`<span>Tier ${x.t-1} completed</span>`:'<span>Tier 1 in progress</span>'}<span>Tier ${x.t+1}: ${Math.round(1000-x.xp)} XP away</span></div></div>
   <div class="grid mt"><div class="tile">${kk('Conditioning')}<b class="n">${mc}%</b><span class="m sm">${mc>=90?'Match sharpness: high':mc>=80?'Match sharpness: good':'Needs rest'}</span></div><div class="tile">${kk('Trust metric')}<b class="n">${Math.round(tr)}%</b><span class="m sm">${esc(mgr(hc).split(' ').pop())}: ${tl}</span></div></div>
-  <div class="tile mt mono sm">${ch.map(([k,v,d])=>`<div class="row sp"><span>${KL[k]}</span><span>${v-d} → ${v} <b style="color:${d>0?'#86f2bd':d<0?'#ff9a9a':'inherit'}">(${d>0?'+':''}${d})</b></span></div>`).join('')}</div>
+  <div class="tile mt mono sm">${ch.map(([k,v,d])=>`<div class="row sp"><span>${fLabel(k)}</span><span>${v-d} → ${v} <b style="color:${d>0?'#86f2bd':d<0?'#ff9a9a':'inherit'}">(${d>0?'+':''}${d})</b></span></div>`).join('')}</div>
   <button class="btn alt full" style="text-align:center" data-a="plan">Modify development plan</button>`);
 }
 
@@ -305,7 +305,7 @@ function vReinvent(r){
   const me=ST.me,W=a=>a[0]+'-'+a[1],cur=peakWindows(me).st;
   const card=(o,i)=>`<div class="tile mt"><div class="row sp wr"><div><span class="pill hot">${esc(POSN[o.pos])}</span> <b style="font-size:19px">${esc(o.arch)}</b><br>${kk(o.pos===me.pos?'Same position, new style':'Move from '+POSN[me.pos].toLowerCase())}</div><button class="btn" data-a="rein" data-v="${i}">Switch to this role</button></div>
     <div class="grid mt" style="grid-template-columns:repeat(3,1fr)"><div class="tile">${kk('Overall now')}<b class="n">${o.ovr}</b><span class="m sm">${o.ovr-me.ovr>=0?'+':''}${o.ovr-me.ovr} (adapting: -${o.pen})</span></div><div class="tile">${kk('In 3 years')}<b class="n">~${o.p3}</b><span class="m sm">${o.p3>=r.stay?'+':''}${o.p3-r.stay} vs staying</span></div><div class="tile">${kk('Output peak')}<b class="n">${W(o.st)}</b><span class="m sm">${o.fit>=0?'Suits your attributes':'A stretch for your attributes'}</span></div></div>
-    <div class="m sm mt">${esc(ARX[o.pos][o.arch].blurb)}</div></div>`;
+    <div class="m sm mt"><b>Why it works:</b> ${esc(o.why||'')} ${esc(ARX[o.pos][o.arch].blurb)}</div></div>`;
   return G('pad',`<span class="pill hot">REINVENTION</span> ${kk(label(ST.season))}<h1>${esc(r.title)}</h1><p>${esc(r.body)}</p>
   <div class="grid" style="grid-template-columns:repeat(3,1fr)"><div class="tile">${kk(KL[r.k]+' (career best)')}<b class="n">${r.peak}</b></div><div class="tile">${kk(KL[r.k]+' now')}<b class="n">${r.now}</b><span class="m sm">down ${r.drop}</span></div><div class="tile">${kk('Staying a '+esc(r.arch))}<b class="n">~${r.stay}</b><span class="m sm">overall in 3 years, output peak ${W(cur)}</span></div></div>
   <p class="m sm mt">Your attributes carry over: a new role is built from what you still have. You will need a season to settle, so the overall shown is a little lower to start.</p>
@@ -340,10 +340,18 @@ function primeTxt(me){
   const W=peakWindows(me),a=me.age,row=(k,w,now,past)=>[k,w[0]+'-'+w[1],a<w[0]?'Rising: '+(w[0]-a)+' yr'+(w[0]-a>1?'s':'')+' to go':a<=w[1]?now:past];
   return[row('Physical',W.ph,'Body at its best','Past its physical best'),row('Technical',W.te,'Technique at its best','Past its technical best'),row('IQ',W.iq,'Reading the game at its best','Past its IQ peak'),row('Statistical',W.st,'Output at its peak','Output past its peak')];
 }
+// the attribute card: six groups, each opening to its sub-attributes with the career best and a train button
+function vAttrs(me){
+  const A=me.attr,mx=me.amax||{},sm=me.smax||{},tg=me.focus;
+  if(me.pos==='GK'||!me.sub)return keysOf(me).map(k=>{const d=(mx[k]||A[k])-A[k];return`<div class="row" style="margin:9px 0"><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b><span class="m sm" style="width:30px;text-align:right">${d>=3?'−'+d:''}</span></div>`}).join('');
+  return GROUPS.map(([k,l])=>{const d=(mx[k]||A[k])-A[k];
+    return`<details class="atg"${tg&&SUBG[tg]===k?' open':''}><summary><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b><span class="m sm" style="width:30px;text-align:right">${d>=3?'−'+d:''}</span></summary>
+    ${l.map(j=>{const dj=(sm[j]||me.sub[j])-me.sub[j];return`<div class="sa"><span class="nm">${SL[j]}</span><div class="bar g1"><i style="width:${me.sub[j]}%"></i></div><b class="mono" style="width:26px;text-align:right">${me.sub[j]}</b><span class="m sm" style="width:30px;text-align:right" title="Career best ${sm[j]||me.sub[j]}">${dj>=3?'−'+dj:''}</span><button class="btn alt xs ${tg===j?'on':''}" data-a="focus" data-v="${j}" title="${esc(SDIR[j])}">${tg===j?'Training':'Train'}</button></div>`}).join('')}</details>`}).join('');
+}
 function vCareer(){
   const me=ST.me,A=me.attr,v=mval(),wt=Math.round((me.ht-100)*WMUL[me.frame||'Athletic']);
   return`<div class="g12">${G('pad s4',`<div class="row" style="gap:16px"><div class="ovr-ring" style="--p:${me.ovr}"><b>${me.ovr}</b></div><div><b style="font-size:20px">${esc(me.name)}</b><br>${kk(POSN[me.pos]+' · '+archName(me))}<br><span class="sm">${stars(me.pa)}</span> <span class="m sm">${esc(me.tier)}</span></div></div>
-  <div class="mt">${keysOf(me).map(k=>`<div class="row" style="margin:9px 0"><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b><span class="m sm" style="width:30px;text-align:right" title="Career best ${(me.amax||{})[k]||A[k]}">${((me.amax||{})[k]||A[k])-A[k]>=3?'−'+(((me.amax||{})[k]||A[k])-A[k]):''}</span></div>`).join('')}</div>
+  <div class="mt">${vAttrs(me)}</div>
   <div class="tile mt sm"><div class="row sp"><span class="m">Frame</span><span>${me.frame||'Athletic'} · ${me.ht} cm · ${wt} kg</span></div><div class="row sp"><span class="m">Foot</span><span>${me.foot} · weak foot ${'★'.repeat(me.wf||3)}</span></div><div class="row sp"><span class="m">Nationality</span><span>${esc(me.nat)}</span></div></div>`)}
   <div class="s8" style="display:grid;gap:16px">${G('pad',`<h2>Contract & value</h2><div class="grid"><div class="tile">${kk('Value')}<b class="n">${euro(v)}</b></div><div class="tile">${kk('Wage / wk')}<b class="n">${me.ct?'€'+me.ct.w+'k':'-'}</b></div><div class="tile">${kk('Expires')}<b class="n">${me.ct?me.ct.exp:'-'}</b></div><div class="tile">${kk('Peak OVR')}<b class="n">${me.peak}</b></div>${primeTxt(me).map(r=>`<div class="tile">${kk(r[0]+' peak')}<b class="n">${r[1]}</b><span class="m sm">${r[2]}</span></div>`).join('')}</div></div>${me.moves.length?`<div class="m sm mt">${me.moves.map(m=>`${m.s}: ${m.k==='loan'?'loan':m.k==='return'?'returned':'moved'} ${esc(m.from)} → ${esc(m.to)}`).join('<br>')}</div>`:''}`)}
   ${G('pad',`<h2>National team ${kk(esc(me.nat))}</h2><div class="grid"><div class="tile">${kk('Status')}<b class="n" style="font-size:19px">${me.nr==='starter'?'First choice':me.nr==='squad'?'In the squad':me.age<16?'Not eligible yet':'Not selected'}</b></div><div class="tile">${kk('Caps')}<b class="n">${me.caps}</b></div><div class="tile">${kk('Goals')}<b class="n">${me.ig}</b></div><div class="tile">${kk('Assists')}<b class="n">${me.ina||0}</b></div><div class="tile">${kk('Avg rating')}<b class="n">${me.natRn?(me.natRs/me.natRn).toFixed(2):'-'}</b></div><div class="tile">${kk('Tournaments won')}<b class="n">${me.hon.filter(h=>h.t==='World Cup'||h.t==='European Championship').length}</b></div></div>`)}
@@ -369,7 +377,11 @@ function vRetired(){
 }
 
 /* ---------- modals ---------- */
-function focusBtns(){const me=ST.me;return`<div class="row wr">${keysOf(me).map(k=>`<button class="btn alt ${me.focus===k?'on':''}" data-a="focus" data-v="${k}">${KL[k]}</button>`).join('')}</div><div class="m sm" style="margin:8px 0 14px">${ST.me.focus?esc(DIR[ST.me.focus]):'One attribute grows faster and earns mastery XP.'}</div>`}
+function focusBtns(){
+  const me=ST.me,f=me.focus,note=`<div class="m sm" style="margin:8px 0 14px">${f?esc(fLabel(f))+': '+esc(fDir(f))+(SUBG[f]?' · about +'+trainGain(me,f,me.age<30?3:1.5).toFixed(1)+' this season':''):'One attribute grows faster and earns mastery XP. Pace and agility respond little to training, passing and finishing a lot.'}</div>`;
+  if(me.pos==='GK'||!me.sub)return`<div class="row wr">${keysOf(me).map(k=>`<button class="btn alt ${f===k?'on':''}" data-a="focus" data-v="${k}">${KL[k]}</button>`).join('')}</div>${note}`;
+  return GROUPS.map(([g,l])=>`<div class="m sm" style="margin:10px 0 4px">${KL[g]} · <b>${me.attr[g]}</b></div><div class="row wr">${l.map(j=>`<button class="btn alt ${f===j?'on':''}" data-a="focus" data-v="${j}">${SL[j]} <span class="m">${me.sub[j]}</span></button>`).join('')}</div>`).join('')+note;
+}
 function vModal(){
   const p=ST.pend,me=ST.me;let h='';
   if(typeof UIM==='string'&&UIM[0]==='p'&&UIM[1]===':')return wrapM(vPCard(+UIM.slice(2)));
