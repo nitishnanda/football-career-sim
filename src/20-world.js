@@ -1,43 +1,55 @@
 let ST=null;
 const SQ=[['GK',2],['CB',4],['FB',4],['DM',2],['CM',3],['AM',2],['W',4],['ST',3]];
 const NSL={GK:1,CB:2,FB:2,DM:1,CM:1,AM:1,W:2,ST:1};
-/* Prime window per position. F (10-data.js) is the shared climb up to 21; from there each position has its own peak age
-   (pk), a short plateau (pw years at 100%) and its own rate of decline (a + b*i lost in the i-th year after the plateau).
-   Fitted to the peak ages of the example players (median peak: ST 26, W/AM 25, CM/DM 26, FB 25, CB 26-27, GK 28) and to the
-   real minutes data (CB/GK starters stay in the XI longest, wingers/attacking mids fade first). Each player also has a
-   personal shift (pks, years, roughly +-2) so some peak early and some late: the curve is blended in from age 18 to 24. */
-const PRIME={ST:{pk:26,pw:2,a:.005,b:.003},W:{pk:25,pw:1,a:.006,b:.004},AM:{pk:25,pw:1,a:.007,b:.004},CM:{pk:26,pw:2,a:.005,b:.003},DM:{pk:26,pw:2,a:.005,b:.003},FB:{pk:25,pw:1,a:.006,b:.004},CB:{pk:27,pw:3,a:.006,b:.003},GK:{pk:28,pw:3,a:.005,b:.003}};
-const FPOS={};
-for(const pos in PRIME){
-  const P=PRIME[pos],c=F.slice(),f21=F[14];let loss=0,i=0;
+/* Four peaks. Ability is built from three components that age differently, each with its own curve (all share the climb to 21, F):
+     physical   stamina, strength, jumping, pace: peaks early (about 23-25), fades from the late 20s
+     technical  first touch, dribbling, skills, finishing and passing technique: peaks mid-to-late 20s, fades slowly
+     IQ         decisions, positioning, shot selection, pass quality: keeps rising into the 30s and fades last
+   An archetype is a mix of the three (MIXA; positions have a default, MIXP, used for generated players), so a pace-based winger peaks
+   early and a deep-lying playmaker late. The mixes were fitted so the statistical peak of each archetype matches the median peak age of its
+   real example players (see data/ref_careers.txt and scripts/fit_peaks.py). Statistical peak is not a fourth curve: it is the same three
+   components weighted toward what produces numbers (technique and especially IQ, less raw athleticism, SMUL), so goal and assist share
+   follows it. Each player also has personal shifts (pks, tks, iqs: years) so some peak early and some late; they are blended in from age 21 to 27. */
+function mkComp(pk,pw,a,b){
+  const c=F.slice(),f21=F[14];let loss=0,i=0;
   for(let age=22;age<=43;age++){
-    if(age<P.pk){const t=(age-21)/(P.pk-21);c[age-7]=f21+(1-f21)*(1-(1-t)*(1-t))}
-    else if(age<=P.pk+P.pw)c[age-7]=1;
-    else{loss+=P.a+P.b*i++;c[age-7]=Math.max(.3,1-loss)}
+    if(age<pk){const t=(age-21)/(pk-21);c[age-7]=f21+(1-f21)*(1-(1-t)*(1-t))}
+    else if(age<=pk+pw)c[age-7]=1;
+    else{loss+=a+b*i++;c[age-7]=Math.max(.3,1-loss)}
   }
-  FPOS[pos]=c;
+  return c;
 }
-// personal peak shift, from the name so it never changes (triangular, about +-2.4 years at the extremes)
-const pkShiftOf=n=>{const h=hashStr('pks|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*2.4*10)/10};
-const pksOf=p=>p.pks!=null?p.pks:(p.pks=pkShiftOf(p.n||''));
-function fAge(a,pos,sh){
-  const T=(pos&&FPOS[pos])||F;a=clamp(a,7,43);
-  if(!sh)return T[Math.round(a)-7];
-  a=clamp(a-sh*clamp((a-18)/6,0,1),7,43);
-  const i=Math.floor(a),f=a-i;return f?T[i-7]*(1-f)+T[Math.min(36,i-6)]*f:T[i-7];
+const COMPS=[mkComp(23,2,.010,.006),mkComp(26,3,.004,.003),mkComp(30,4,.004,.002)],SMUL=[.6,1,1.5],CNAME=['Physical','Technical','IQ'];
+const MIXP={ST:[0.35,0.53,0.11],W:[0.32,0.52,0.15],AM:[0.16,0.61,0.23],CM:[0.25,0.40,0.35],DM:[0.26,0.26,0.48],FB:[0.38,0.25,0.37],CB:[0.39,0.09,0.52],GK:[0.30,0.30,0.40]};
+const MIXA={"ST|Poacher":[.40,.50,.10],"ST|Playmaking Forward":[.25,.60,.15],"ST|Target Man":[.05,.65,.30],"ST|Complete Forward":[.35,.55,.10],"W|Inside Forward":[.35,.50,.15],"W|Traditional Winger":[.40,.55,.05],"W|Flashy Winger":[.40,.55,.05],"W|Pace Abuser":[.80,.20,0],"AM|Classic No.10":[.25,.65,.10],"AM|Shadow Striker":[.40,.55,.05],"AM|Dribbling Ten":[.70,.30,0],"CM|Deep-Lying Playmaker":[0,.20,.80],"CM|Box-to-Box":[.50,.30,.20],"CM|Advanced Creator":[.35,.35,.30],"DM|Anchor":[.25,.25,.50],"DM|Ball Winner":[.50,.30,.20],"DM|Regista":[.15,.30,.55],"FB|Attacking Wing-Back":[.40,.25,.35],"FB|Inverted Full-Back":[.55,.20,.25],"FB|Defensive Full-Back":[.40,.25,.35],"CB|Stopper":[.20,.10,.70],"CB|Ball-Playing Defender":[.20,.10,.70],"CB|Recovery Defender":[.85,.05,.10],"GK|Shot-Stopper":[.15,.35,.50],"GK|Sweeper Keeper":[.15,.35,.50]};
+const mixOf=(pos,arch)=>MIXA[pos+'|'+arch]||MIXP[pos]||[.33,.34,.33];
+// a component's value at an age, with a personal shift blended in between 21 and 27 (teenage development is untouched)
+function compAt(ci,a,sh){a=clamp(a,7,43);if(sh)a=clamp(a-sh*clamp((a-21)/6,0,1),7,43);const T=COMPS[ci],i=Math.floor(a),f=a-i;return f?T[i-7]*(1-f)+T[Math.min(36,i-6)]*f:T[i-7]}
+const _mx={};
+function blendMax(w){const k=w.join();if(_mx[k]!=null)return _mx[k];let m=0;for(let a=21;a<=43;a++){let r=0;for(let c=0;c<3;c++)r+=w[c]*COMPS[c][a-7];if(r>m)m=r}return _mx[k]=m}
+// share of peak ability (or output, with sm=SMUL) at an age for a mix w and personal shifts sh=[physical,technical,iq]
+function curveAt(w,a,sh,sm){
+  if(sm)w=norm3(w.map((x,i)=>x*sm[i]));
+  let r=0;for(let c=0;c<3;c++)r+=w[c]*compAt(c,a,sh&&sh[c]);
+  const f21=F[14],mx=blendMax(w);return r<=f21?r:f21+(r-f21)/(mx-f21)*(1-f21);
 }
-const ovrAt=(pa,age,dv,pos,sh)=>clamp(Math.round(pa*fAge(age,pos,sh)+dv),25,98);
-/* Statistical prime: when a player actually puts up numbers. Experience (movement, finishing and passing decisions, reading the game)
-   keeps adding after the body peaks, so output peaks later than ability and has its own, wider personal shift (sks, about +-4 years):
-   Neymar-types peak at 23-26, Salah-types at 30+. A bell around sp+sks adds up to STB (10%) to goal and assist share; see statF in 30-match.js. */
-const STATP={ST:28,W:27,AM:27,CM:28,DM:28,FB:27,CB:29,GK:30},STB=.10,STH=4;
-const sksOf=p=>p.sks!=null?p.sks:(p.sks=sksShiftOf(p.n||''));
-const sksShiftOf=n=>{const h=hashStr('sks|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*4*10)/10};   // triangular, up to +-4
-const statBell=(age,pos,sks)=>{const x=(age-(STATP[pos]||28)-(sks||0))/STH;return Math.exp(-x*x)};
-// the years in which the experience bonus is at 70% of its maximum or better (about a five-year window)
-function statPrimeOf(pos,sks){let lo=null,hi=null;for(let a=16;a<=42;a++){if(statBell(a,pos,sks)>=.7){if(lo==null)lo=a;hi=a}}return[lo,hi]}
-// the years in which a player is within 1% of his best
-function primeOf(pos,sh){let lo=null,hi=null;for(let a=18;a<=40;a++){if(fAge(a,pos,sh)>=.99){if(lo==null)lo=a;hi=a}}return[lo,hi]}
+const norm3=w=>{const s=w[0]+w[1]+w[2];return[w[0]/s,w[1]/s,w[2]/s]};
+const pkShiftOf=n=>{const h=hashStr('pks|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*5.5*10)/10};
+const tkShiftOf=n=>{const h=hashStr('tks|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*5.5*10)/10};
+const iqShiftOf=n=>{const h=hashStr('iqs|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*8*10)/10};
+// a player's personal shifts, assigned from his name the first time they are needed
+function shiftsOf(p){if(p.pks==null)p.pks=pkShiftOf(p.n||'');if(p.tks==null)p.tks=tkShiftOf(p.n||'');if(p.iqs==null)p.iqs=iqShiftOf(p.n||'');return[p.pks,p.tks,p.iqs]}
+// share of peak ability: pos/arch pick the mix; sh the personal shifts (omit both for the shared climb only)
+function fAge(a,pos,arch,sh){if(!pos)return F[clamp(Math.round(a),7,43)-7];return curveAt(mixOf(pos,arch),a,sh)}
+const fOf=(p,a)=>fAge(a,p.pos,p.arch,shiftsOf(p));
+// output relative to ability: how much more (or less) a player produces than his ability alone says, at his age
+function outRatio(p,a){const w=mixOf(p.pos,p.arch),sh=shiftsOf(p);return curveAt(w,a,sh,SMUL)/curveAt(w,a,sh)}
+const ovrAt=(pa,age,dv,p)=>clamp(Math.round(pa*fOf(p,age)+dv),25,98);
+// peak windows for the tile: the years each component is within 1% of its best, and the years output is within 1% of its best
+function peakWindows(p){
+  const sh=shiftsOf(p),w=mixOf(p.pos,p.arch),win=fn=>{let m=0;for(let a=16;a<=43;a++)m=Math.max(m,fn(a));let lo=null,hi=null;for(let a=16;a<=43;a++)if(fn(a)>=m*.99){if(lo==null)lo=a;hi=a}return[lo,hi]};
+  return{ph:win(a=>compAt(0,a,sh[0])),te:win(a=>compAt(1,a,sh[1])),iq:win(a=>compAt(2,a,sh[2])),st:win(a=>curveAt(w,a,sh,SMUL)),ab:win(a=>curveAt(w,a,sh))};
+}
 const club=id=>ST.W.clubs[id];
 const poolOf=n=>(NATS.find(x=>x[0]===n)||NATS[0])[1];
 
@@ -55,7 +67,7 @@ function addPlayer(g,c,pos,ovr,age,pa,real){
     for(let t=0;nm.has(n)&&t<14;t++)n=g.pick(pl[0])+' '+g.pick(pl[1]);
     if(nm.has(n))n+=' '+String.fromCharCode(65+g.int(0,25))+'.';
     nm.add(n)}
-  const sh=pkShiftOf(n),p={id,n,nat,pos,age,pks:sh,sks:sksShiftOf(n),pa:Math.round((pa||ovr/fAge(age,pos,sh))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age,pos,sh))):ovr};   // pk: best rating reached (estimated for veterans at the start)
+  const sh=[pkShiftOf(n),tkShiftOf(n),iqShiftOf(n)],p={id,n,nat,pos,age,pks:sh[0],tks:sh[1],iqs:sh[2],pa:Math.round((pa||ovr/fAge(age,pos,null,sh))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age,pos,null,sh))):ovr};   // pk: best rating reached (estimated for veterans at the start)
   if(real&&real.fl)p.fl=1;
   if(!real)p.fk=1;   // made-up regen or signing: not a real player
   if(real&&real.gs!=null){p.gs=real.gs;p.asr=real.asr;p.pf=real.pf}
@@ -105,7 +117,7 @@ function addReal(g,c,list){
       ovr=Math.round(clamp(ovr,38,95));
       // potential: young players only keep the nominal growth if their real performances back it up
       let pa,gm;
-      if(x.age<24){const rel=x.evm/(x.evm+600);gm=clamp(.8+.3*(x.pf||0)*rel-(x.evm<300?.1:0),.3,1.2);pa=Math.min(96,ovr/fAge(x.age,pos,pkShiftOf(x.n)))}
+      if(x.age<24){const rel=x.evm/(x.evm+600);gm=clamp(.8+.3*(x.pf||0)*rel-(x.evm<300?.1:0),.3,1.2);pa=Math.min(96,ovr/fAge(x.age,pos,null,[pkShiftOf(x.n),tkShiftOf(x.n),iqShiftOf(x.n)]))}
       addPlayer(g,c,pos,ovr,x.age,pa,{n:x.n,nat:x.nat,gs:x.gs,asr:x.asr,pf:x.pf,gm});
     });
     for(let r=arr.length;r<k;r++){c.fln=(c.fln||0)+1;addPlayer(g,c,pos,Math.round(c.base-6),26,undefined,{n:c.name+' reserve '+c.fln,nat:LGN[c.lg].nat,fl:1})}
@@ -198,7 +210,7 @@ function rollWorld(){
     c._bp=null;
     for(const id of c.sq.slice()){
       const p=W.pl[id],dvN=clamp(p.dv*.75+g.norm(0,1.5),-8,8),o0=p.o0!=null?p.o0:p.ovr;
-      p.age++;p.dv=dvN;const nom=ovrAt(p.pa,p.age,dvN,p.pos,pksOf(p));
+      p.age++;p.dv=dvN;const nom=ovrAt(p.pa,p.age,dvN,p);
       p.ovr=p.gm!=null&&p.age<=25&&nom>o0?Math.round(o0+p.gm*(nom-o0)):nom;p.o0=p.ovr;delete p.ovf;p.pk=Math.max(p.pk||p.ovr,p.ovr);
       if(p.age>=43||(p.age>=34&&g.chance((p.age-33)*.17))){p.cl=-1;W.free.push(id);c.sq=c.sq.filter(x=>x!==id)}
     }

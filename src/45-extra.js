@@ -161,14 +161,14 @@ function inSeasonDev(n){
       const z=(p.rs/p.ap-(ft.a0+ft.b*p.ovr))/ft.sd*p.ap/(p.ap+12),dz=z-(p.zp||0),[sd,sp]=sens(p.age);
       p.zp=z;p.dv=clamp(p.dv+sd*dz,-8,8);if(sp&&p.age<25)p.gm=clamp((p.gm!=null?p.gm:1)+.1*dz,.25,1.3);
     }
-    const o=p.ovf!=null?p.ovf:p.ovr,o0=p.o0!=null?p.o0:p.ovr,nom=ovrAt(p.pa,p.age+1,p.dv*.75,p.pos,pksOf(p)),target=p.gm!=null&&p.age<25&&nom>o0?o0+p.gm*(nom-o0):nom;
+    const o=p.ovf!=null?p.ovf:p.ovr,o0=p.o0!=null?p.o0:p.ovr,nom=ovrAt(p.pa,p.age+1,p.dv*.75,p),target=p.gm!=null&&p.age<25&&nom>o0?o0+p.gm*(nom-o0):nom;
     p.ovf=Math.round((o+(target-o)*f)*10)/10;p.ovr=Math.round(p.ovf);
   }
   for(const c of W.clubs)c._bp=null;
   // the user's player, same logic
   const me=ST.me,ss=me.ss,rn=sumSS(ss,'rn'),rsum=sumSS(ss,'rs'),ft=fitp[me.pos];
   if(ft&&rn>=4){const z=(rsum/rn-(ft.a0+ft.b*me.ovr))/ft.sd*rn/(rn+12),dz=z-(me.zp||0);me.zp=z;me.gap=clamp(me.gap+(me.age<=23?.8:.4)*dz,-9,3)}
-  const target=me.pa*fAge(me.age+1,me.pos,me.pks)*archAge(me,me.age+1)+me.gap*.75;me.base+=(target-me.base)*f;refresh(me);
+  const target=me.pa*fOf(me,me.age+1)*archAge(me,me.age+1)+me.gap*.75;me.base+=(target-me.base)*f;refresh(me);
   if(typeof holdEliteTail==='function')holdEliteTail();
 }
 

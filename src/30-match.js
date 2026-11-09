@@ -46,8 +46,8 @@ const CG={ST:.078,W:.14,AM:.097,CM:.075,DM:.045,FB:.055,CB:.045,GK:0},CA={ST:.04
 // and a player in his statistical prime gets a few more than his ability alone says.
 // Only applied to simulated shares; a real player's measured share (p.gs / p.asr) already reflects his own record.
 const YTHF=a=>a>=22?1:a>=21?.97:a>=20?.93:a>=19?.89:a>=18?.84:a>=17?.78:.72;
-// output multiplier: the teenage ramp, times the experience bonus that peaks at the player's own statistical prime
-const statF=p=>p.age==null?1:YTHF(p.age)*(1+STB*statBell(p.age,p.pos,sksOf(p)));
+// output multiplier: the teenage ramp, times output relative to ability at this age (see outRatio: later for IQ-based players)
+const statF=p=>{if(p.age==null||!p.pos)return 1;if(p._sfa!==p.age){p._sfa=p.age;p._sf=YTHF(p.age)*clamp(outRatio(p,p.age),.85,1.15)}return p._sf};
 function gshare(x,ref){const p=x.p;if(p.gs!=null)return p.gs;const mu=PRI.g[x.pos],d=clamp((p.sc||p.ovr)-ref,-12,10),y=statF(p);return mu==null?(x.pos==='GK'?0:SCW[x.pos]/23.4*Math.exp((CG[x.pos]||.04)*(d-6))*y):mu*Math.exp((CG[x.pos]||.04)*(d-6))*(p.gm||1)*y}
 function ashare(x,ref){const p=x.p;if(p.asr!=null)return p.asr;const mu=PRI.a[x.pos],d=clamp((p.ac||p.ovr)-ref,-12,10),y=statF(p);return mu==null?ASW[x.pos]/20*Math.exp((CA[x.pos]||.04)*(d-3))*y:mu*Math.exp((CA[x.pos]||.04)*(d-3))*(p.am||1)*y}
 function allocate(xi,n,g,L){
