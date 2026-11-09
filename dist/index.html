@@ -1690,10 +1690,11 @@ const SSUB={shoff:{fin:.35,pwr:.2,lsh:.2,apo:.15,vol:.1},sotng:{fin:.5,pwr:.2,co
 tk:{stk:.5,slk:.2,awa:.2,agg:.1},bl:{awa:.5,jum:.2,str:.1,itc:.2},ic:{itc:.6,awa:.4},duw:{str:.3,jum:.3,hea:.2,agg:.2},dul:{str:.3,jum:.3,hea:.2,agg:.2},drs:{drb:.35,bco:.25,agi:.2,bal:.1,rea:.1},drf:{drb:.35,bco:.25,agi:.2,bal:.1,rea:.1},
 past:{awa:.4,itc:.3,stk:.3},fd:{agi:.3,bal:.3,drb:.4},off:{spr:.3,acc:.3,apo:.4}};
 /* Realism ceilings: the highest value any player has ever had for each attribute (Mbappé 97 acceleration and sprint speed, Messi 97 ball
-   control and 96 composure, Neymar 96 agility, Kanté 97 stamina, ...). Volleys, penalties, crossing, curve, reactions, balance and heading
-   accuracy were not in the record list and are estimates. Values approach a ceiling gradually (softCap), so only an extreme case gets within
+   control and 96 composure, Neymar 96 agility, Kanté 97 stamina, ...). Defenders' crossing tops out at 92 (Alexander-Arnold) and balance follows
+   height (shorter players sit higher, as with Messi, Verratti and Papu Gómez). Values approach a ceiling gradually (softCap), so only an extreme case gets within
    a point or two of the record and nobody sits on it for a decade. */
-const SACAP={acc:97,spr:97,fin:95,apo:95,pwr:95,lsh:94,vol:93,pen:92,vis:94,crs:94,fkk:94,spa:94,lpa:93,cur:94,agi:96,bal:95,rea:95,bco:97,drb:96,com:96,itc:92,hea:94,awa:94,stk:93,slk:91,jum:95,sta:97,str:95,agg:95};
+const SACAP={acc:97,spr:97,fin:95,apo:95,pwr:95,lsh:94,vol:92,pen:93,vis:94,crs:94,fkk:94,spa:94,lpa:93,cur:94,agi:96,bal:95,rea:96,bco:97,drb:96,com:96,itc:92,hea:94,awa:94,stk:93,slk:91,jum:95,sta:97,str:95,agg:95};
+const capOf=(me,j)=>j==='crs'&&(me.pos==='FB'||me.pos==='CB'||me.pos==='DM')?92:SACAP[j];
 const softCap=(v,cap)=>{const k=cap-10;return v<=k?v:k+10*(1-Math.exp(-(v-k)/10))};
 /* Build: lean frames are quick and agile but weak, power frames are strong, balanced and good in the air and in the tackle but slow and stiff.
    FRAMEG moves the six groups (it changes the player's profile, not his overall); FRAMESUB moves the sub-attributes inside the groups. */
@@ -1732,9 +1733,9 @@ function buildSubs(me,A){
   for(const[k,l]of GROUPS){
     let Gk=0;for(const j of l)Gk+=SW[j]*g[j];
     let mean=0,meanB=0;const base={},dv={};
-    for(const j of l){base[j]=(pp[j]||0)+(aa[j]||0)+(fr[j]||0);dv[j]=((me.sdev&&me.sdev[j])||0)+(g[j]-Gk);mean+=SW[j]*(base[j]+dv[j]);meanB+=SW[j]*base[j]}
+    for(const j of l){base[j]=(pp[j]||0)+(aa[j]||0)+(fr[j]||0)+(j==='bal'?clamp((181-(me.ht||181))*.45,-9,9):0);/* balance follows height: a low centre of gravity */dv[j]=((me.sdev&&me.sdev[j])||0)+(g[j]-Gk);mean+=SW[j]*(base[j]+dv[j]);meanB+=SW[j]*base[j]}
     for(const j of l){
-      const t=base[j]+dv[j]-mean;sub[j]=clamp(Math.round(softCap(A[k]+t,SACAP[j])),15,SACAP[j]);subd[j]=t-(base[j]-meanB);
+      const t=base[j]+dv[j]-mean;const cp=capOf(me,j);sub[j]=clamp(Math.round(softCap(A[k]+t,cp)),15,cp);subd[j]=t-(base[j]-meanB);
       if(sub[j]>(me.smax[j]||0))me.smax[j]=sub[j];
     }
   }
