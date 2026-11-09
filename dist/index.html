@@ -1991,7 +1991,7 @@ function genStats(me,min,gl,as,gf,ga,lt,lo,gm,pl,poss,act,gcOn){
   const q=s=>{const k=pos==='GK'?(GATT[s]||'pos'):SATT[s];let a=A[k];if(a==null)return me.ovr;if(pos!=='GK')a+=subAdj(me,s);return me.ovr+(a-((P[k]||0)+me.ovr))};
   const f=simLine(gm,pos,min,gl,as,gf,ga,poss==null?.5:poss,lo/1.35,q,AX.ex,AX.vol,pl&&pl.red,gcOn);
   const s={min:act||min,reg:min,g:gl,a:as,ga,sh:f.shoff+f.sotng+gl,sot:f.sotng+gl,kp:f.kpx+as,pa:f.pas,pc:f.pas-f.pmiss,tk:f.tk,ic:f.ic,dr:f.drs,dra:f.drs+f.drf,bl:f.bl,du:f.duw+f.dul,duw:f.duw,past:f.past,fd:f.fd,fc:f.fc,sv:f.sv,yc:f.yc};
-  s.rating=clamp(Math.round((ratingOf(pos,f,gm)+(AX.ro||0)*(min>=60?1:min/60))*10)/10,3,10);s.f=f;s.bd=breakdown(pos,f,s.rating);return s;
+  s.rating=clamp(Math.round(tailR(ratingRaw(pos,f,gm)+(AX.ro||0)*(min>=60?1:min/60))*10)/10,3,10);s.f=f;s.bd=breakdown(pos,f,s.rating);return s;
 }
 // Simulated team stats around a result: possession from midfield strength, shots and corners from expected goals
 function teamStats(lh,la,sh,sa,hg,ag,g,p0){
@@ -2081,7 +2081,11 @@ const XMAP={shoff:'sh',sotng:'sh',kpx:'kp',pas:'kp',drs:'dr',drf:'dr',tk:'tk',ic
 function gammaS(g,k){if(k<1)return gammaS(g,k+1)*Math.pow(g.r()||1e-9,1/k);const d=k-1/3,c=1/Math.sqrt(9*d);for(;;){let x,v;do{x=g.norm(0,1);v=1+c*x}while(v<=0);v=v*v*v;const u=g.r();if(u<1-.0331*x*x*x*x||Math.log(u)<.5*x*x+d*(1-v+Math.log(v)))return d*v}}
 function cnt(g,mu,disp){if(mu<=0)return 0;if(disp<=1.03)return g.pois(mu);const k=mu/(disp-1);return g.pois(gammaS(g,k)*mu/k)}
 // g: optional random stream for the part of a rating no box-score stat explains (model residual)
-function ratingOf(pos,f,g){const M=RM.model[pos]||RM.model.CM;let r=M.b0+(RCAL[pos]||0);for(const k in M.w)r+=M.w[k]*(f[k]||0);if(g)r+=g.norm(0,M.sd||.25);return clamp(Math.round(r*10)/10,3,10)}
+/* A standout game is easier to push to 10 than the plain linear model allows: above TAIL_K the rating is stretched by TAIL_S (ordinary ratings are untouched; a hat-trick
+   in a win reaches 10.0 about a fifth of the time, a hat-trick and an assist about two games in three, four goals nearly always). */
+const TAIL_K=9.0,TAIL_S=1.2,tailR=r=>r>TAIL_K?TAIL_K+(r-TAIL_K)*TAIL_S:r;
+function ratingRaw(pos,f,g){const M=RM.model[pos]||RM.model.CM;let r=M.b0+(RCAL[pos]||0);for(const k in M.w)r+=M.w[k]*(f[k]||0);if(g)r+=g.norm(0,M.sd||.25);return r}
+function ratingOf(pos,f,g){return clamp(Math.round(tailR(ratingRaw(pos,f,g))*10)/10,3,10)}
 // q: number (player overall) or function(stat)->effective quality; xm: archetype multipliers; vol: extra spread for dribble-heavy styles
 function simLine(g,pos,min,gl,as,gf,ga,poss,opx,q,xm,vol,red,gcOn){
   const G=RM.gen[pos]||RM.gen.CM,f={m90:min/90,short:min<25?1:0,g:gl,g2:Math.max(0,gl-1),a:as};
@@ -2112,7 +2116,7 @@ function ratingFast(g,pos,min,gl,as,gf,ga,poss,opx,q,acc,gcOn){
   if(pos==='GK'||pos==='CB'||pos==='FB')r+=W_.gc*gc;
   if(gc===0&&min>=60&&(pos==='GK'||pos==='CB'||pos==='FB'||pos==='DM'))r+=W_.cs;
   r+=(gf>ga?W_.win:0)+(gf<ga?W_.loss:0)+W_.gd*clamp(gf-ga,-3,3);
-  return clamp(Math.round((r+g.norm(0,Math.sqrt(v+(M.sd||.25)**2)))*10)/10,3,10);
+  return clamp(Math.round(tailR(r+g.norm(0,Math.sqrt(v+(M.sd||.25)**2)))*10)/10,3,10);
 }
 // What moved a rating: each stat's contribution relative to an average full game at the position
 const FLAB={g:'Goals',g2:'Extra goals',a:'Assists',shoff:'Shots off target',sotng:'Shots on target (saved)',kpx:'Key passes',pas:'Passes',pmiss:'Misplaced passes',tk:'Tackles',bl:'Blocks',ic:'Interceptions',duw:'Duels won',dul:'Duels lost',drs:'Dribbles completed',drf:'Dribbles lost',past:'Dribbled past',fd:'Fouls won',fc:'Fouls committed',yc:'Yellow card',rc:'Red card',pw:'Penalty won',pcm:'Penalty conceded',pm:'Penalty missed',off:'Offsides',sv:'Saves',gc:'Goals conceded',cs:'Clean sheet',win:'Win',loss:'Defeat',gd:'Goal difference'};
@@ -2134,7 +2138,7 @@ const xv=(p,k)=>{const x=p.x;if(!x)return 0;return Array.isArray(x)?(x[XK.indexO
 /* Rating breakdown. The match rating is the fitted linear model in 31-lines.js: 6.5 + a typical match for the position + each stat's weight times how far
    it is from its average, plus noise. Here the same stats are grouped into four categories (goalkeepers: three), each worth its summed contribution against an
    average game at that position, so a category is 0 for an average game, positive when it lifted the rating and negative when it cost it:
-     rating = 6.5 base + typical match + shooting + passing + dribbling + defending + team result and minutes + unexplained (style, noise, rounding).
+     rating = 6.5 base + typical match + shooting + passing + dribbling + defending + team result and minutes + standout bonus + unexplained (style, noise, rounding).
    Nothing here changes a rating; it only explains it. Per-match breakdowns are kept on the stat line, and the average per role is kept on the player so the
    effect of reinventing shows up as a change in his profile. */
 const BKCAT={out:[['Shooting',['g','g2','shoff','sotng','pm','off']],['Passing',['a','kpx','pas','pmiss']],['Dribbling',['drs','drf','fd','pw']],['Defending',['tk','bl','ic','duw','dul','past','fc','yc','rc','pcm','gc','cs']]],
@@ -2154,8 +2158,8 @@ function breakdown(pos,f,rating){
   const imp=ks=>ks.reduce((s,k)=>s+(W[k]||0)*((f[k]||0)-bkExp(pos,k,m,G)),0);
   let typ=M.b0+(RCAL[pos]||0)-6.5;for(const k in W)typ+=W[k]*bkExp(pos,k,m,G);
   const c=cats.map(([,ks])=>imp(ks)),x=imp(BKCTX),sum=c.reduce((a,b)=>a+b,0);
-  const r2=v=>Math.round(v*100)/100;
-  return{c:c.map(r2),x:r2(x),t:r2(typ),o:r2(rating-(6.5+typ+sum+x))};
+  const r2=v=>Math.round(v*100)/100,bonus=rating>TAIL_K?rating-(TAIL_K+(rating-TAIL_K)/TAIL_S):0;   // the stretch for a standout game (see TAIL_K)
+  return{c:c.map(r2),x:r2(x),t:r2(typ),s:r2(bonus),o:r2(rating-(6.5+typ+sum+x+bonus))};
 }
 /* Categories are shown against their own typical spread at the position (BKSD: the standard deviation of each category over simulated games), the way
    SofaScore scales its bars, so dribbling is as readable as shooting even though a dribble moves the rating much less than a goal. z = impact / spread.
@@ -4694,8 +4698,8 @@ function vBk(pos,bd,rating){
   ${cats.map(([lab],i)=>{const z=bkZg(pos,i,bd.c[i]);return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(z)}</div>`}).join('')}
   <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.50</b></div><div class="kv"><span>A typical ${esc(POSN[pos].toLowerCase())} match (minutes and involvement)</span><b class="mono">${sgn(bd.t)}</b></div>
   ${cats.map(([lab],i)=>`<div class="kv"><span>${lab}</span><b class="mono" style="color:var(--${bd.c[i]>=.05?'good':bd.c[i]<=-.05?'badc':'tx'})">${sgn(bd.c[i])}</b></div>`).join('')}
-  <div class="kv"><span>Team result</span><b class="mono">${sgn(bd.x)}</b></div><div class="kv"><span>Style and match feel</span><b class="mono">${sgn(bd.o)}</b></div>
-  <div class="kv"><span><b>Rating</b>${Math.abs(6.5+bd.t+sum+bd.x+bd.o-rating)>.06?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Compared with an average game at your position. Ratings come from a model fitted on 91,000 real player-matches.</div>`;
+  <div class="kv"><span>Team result</span><b class="mono">${sgn(bd.x)}</b></div>${bd.s>=.03?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bd.s)}</b></div>`:''}<div class="kv"><span>Style and match feel</span><b class="mono">${sgn(bd.o)}</b></div>
+  <div class="kv"><span><b>Rating</b>${Math.abs(6.5+bd.t+sum+bd.x+(bd.s||0)+bd.o-rating)>.06?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Compared with an average game at your position. Ratings come from a model fitted on 91,000 real player-matches.</div>`;
 }
 // the average game: this role's average impact per category, a colour strip of recent games, and how each role he has played compares
 function vProfile(){

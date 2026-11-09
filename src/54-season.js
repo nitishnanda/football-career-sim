@@ -226,8 +226,8 @@ function vBk(pos,bd,rating){
   ${cats.map(([lab],i)=>{const z=bkZg(pos,i,bd.c[i]);return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(z)}</div>`}).join('')}
   <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.50</b></div><div class="kv"><span>A typical ${esc(POSN[pos].toLowerCase())} match (minutes and involvement)</span><b class="mono">${sgn(bd.t)}</b></div>
   ${cats.map(([lab],i)=>`<div class="kv"><span>${lab}</span><b class="mono" style="color:var(--${bd.c[i]>=.05?'good':bd.c[i]<=-.05?'badc':'tx'})">${sgn(bd.c[i])}</b></div>`).join('')}
-  <div class="kv"><span>Team result</span><b class="mono">${sgn(bd.x)}</b></div><div class="kv"><span>Style and match feel</span><b class="mono">${sgn(bd.o)}</b></div>
-  <div class="kv"><span><b>Rating</b>${Math.abs(6.5+bd.t+sum+bd.x+bd.o-rating)>.06?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Compared with an average game at your position. Ratings come from a model fitted on 91,000 real player-matches.</div>`;
+  <div class="kv"><span>Team result</span><b class="mono">${sgn(bd.x)}</b></div>${bd.s>=.03?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bd.s)}</b></div>`:''}<div class="kv"><span>Style and match feel</span><b class="mono">${sgn(bd.o)}</b></div>
+  <div class="kv"><span><b>Rating</b>${Math.abs(6.5+bd.t+sum+bd.x+(bd.s||0)+bd.o-rating)>.06?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Compared with an average game at your position. Ratings come from a model fitted on 91,000 real player-matches.</div>`;
 }
 // the average game: this role's average impact per category, a colour strip of recent games, and how each role he has played compares
 function vProfile(){

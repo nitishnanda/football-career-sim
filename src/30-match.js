@@ -105,7 +105,7 @@ function genStats(me,min,gl,as,gf,ga,lt,lo,gm,pl,poss,act,gcOn){
   const q=s=>{const k=pos==='GK'?(GATT[s]||'pos'):SATT[s];let a=A[k];if(a==null)return me.ovr;if(pos!=='GK')a+=subAdj(me,s);return me.ovr+(a-((P[k]||0)+me.ovr))};
   const f=simLine(gm,pos,min,gl,as,gf,ga,poss==null?.5:poss,lo/1.35,q,AX.ex,AX.vol,pl&&pl.red,gcOn);
   const s={min:act||min,reg:min,g:gl,a:as,ga,sh:f.shoff+f.sotng+gl,sot:f.sotng+gl,kp:f.kpx+as,pa:f.pas,pc:f.pas-f.pmiss,tk:f.tk,ic:f.ic,dr:f.drs,dra:f.drs+f.drf,bl:f.bl,du:f.duw+f.dul,duw:f.duw,past:f.past,fd:f.fd,fc:f.fc,sv:f.sv,yc:f.yc};
-  s.rating=clamp(Math.round((ratingOf(pos,f,gm)+(AX.ro||0)*(min>=60?1:min/60))*10)/10,3,10);s.f=f;s.bd=breakdown(pos,f,s.rating);return s;
+  s.rating=clamp(Math.round(tailR(ratingRaw(pos,f,gm)+(AX.ro||0)*(min>=60?1:min/60))*10)/10,3,10);s.f=f;s.bd=breakdown(pos,f,s.rating);return s;
 }
 // Simulated team stats around a result: possession from midfield strength, shots and corners from expected goals
 function teamStats(lh,la,sh,sa,hg,ag,g,p0){

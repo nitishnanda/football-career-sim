@@ -1,7 +1,7 @@
 /* Rating breakdown. The match rating is the fitted linear model in 31-lines.js: 6.5 + a typical match for the position + each stat's weight times how far
    it is from its average, plus noise. Here the same stats are grouped into four categories (goalkeepers: three), each worth its summed contribution against an
    average game at that position, so a category is 0 for an average game, positive when it lifted the rating and negative when it cost it:
-     rating = 6.5 base + typical match + shooting + passing + dribbling + defending + team result and minutes + unexplained (style, noise, rounding).
+     rating = 6.5 base + typical match + shooting + passing + dribbling + defending + team result and minutes + standout bonus + unexplained (style, noise, rounding).
    Nothing here changes a rating; it only explains it. Per-match breakdowns are kept on the stat line, and the average per role is kept on the player so the
    effect of reinventing shows up as a change in his profile. */
 const BKCAT={out:[['Shooting',['g','g2','shoff','sotng','pm','off']],['Passing',['a','kpx','pas','pmiss']],['Dribbling',['drs','drf','fd','pw']],['Defending',['tk','bl','ic','duw','dul','past','fc','yc','rc','pcm','gc','cs']]],
@@ -21,8 +21,8 @@ function breakdown(pos,f,rating){
   const imp=ks=>ks.reduce((s,k)=>s+(W[k]||0)*((f[k]||0)-bkExp(pos,k,m,G)),0);
   let typ=M.b0+(RCAL[pos]||0)-6.5;for(const k in W)typ+=W[k]*bkExp(pos,k,m,G);
   const c=cats.map(([,ks])=>imp(ks)),x=imp(BKCTX),sum=c.reduce((a,b)=>a+b,0);
-  const r2=v=>Math.round(v*100)/100;
-  return{c:c.map(r2),x:r2(x),t:r2(typ),o:r2(rating-(6.5+typ+sum+x))};
+  const r2=v=>Math.round(v*100)/100,bonus=rating>TAIL_K?rating-(TAIL_K+(rating-TAIL_K)/TAIL_S):0;   // the stretch for a standout game (see TAIL_K)
+  return{c:c.map(r2),x:r2(x),t:r2(typ),s:r2(bonus),o:r2(rating-(6.5+typ+sum+x+bonus))};
 }
 /* Categories are shown against their own typical spread at the position (BKSD: the standard deviation of each category over simulated games), the way
    SofaScore scales its bars, so dribbling is as readable as shooting even though a dribble moves the rating much less than a goal. z = impact / spread.
