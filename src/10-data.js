@@ -1,4 +1,4 @@
-const VER=13;
+const VER=14;
 const NTOP=5,CO=['England','Spain','Germany','Italy','France'];
 const CUPN={England:'FA Cup',Spain:'Copa del Rey',Germany:'DFB-Pokal',Italy:'Coppa Italia',France:'Coupe de France'};
 // REAL (data/world.json, built from Wikipedia) is injected by the build: divisions, clubs, managers, grounds, players

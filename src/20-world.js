@@ -1,8 +1,34 @@
 let ST=null;
 const SQ=[['GK',2],['CB',4],['FB',4],['DM',2],['CM',3],['AM',2],['W',4],['ST',3]];
 const NSL={GK:1,CB:2,FB:2,DM:1,CM:1,AM:1,W:2,ST:1};
-const fAge=a=>F[clamp(Math.round(a),7,43)-7];
-const ovrAt=(pa,age,dv)=>clamp(Math.round(pa*fAge(age)+dv),25,98);
+/* Prime window per position. F (10-data.js) is the shared climb up to 21; from there each position has its own peak age
+   (pk), a short plateau (pw years at 100%) and its own rate of decline (a + b*i lost in the i-th year after the plateau).
+   Fitted to the peak ages of the example players (median peak: ST 26, W/AM 25, CM/DM 26, FB 25, CB 26-27, GK 28) and to the
+   real minutes data (CB/GK starters stay in the XI longest, wingers/attacking mids fade first). Each player also has a
+   personal shift (pks, years, roughly +-2) so some peak early and some late: the curve is blended in from age 18 to 24. */
+const PRIME={ST:{pk:26,pw:2,a:.005,b:.003},W:{pk:25,pw:1,a:.006,b:.004},AM:{pk:25,pw:1,a:.007,b:.004},CM:{pk:26,pw:2,a:.005,b:.003},DM:{pk:26,pw:2,a:.005,b:.003},FB:{pk:25,pw:1,a:.006,b:.004},CB:{pk:27,pw:3,a:.006,b:.003},GK:{pk:28,pw:3,a:.005,b:.003}};
+const FPOS={};
+for(const pos in PRIME){
+  const P=PRIME[pos],c=F.slice(),f21=F[14];let loss=0,i=0;
+  for(let age=22;age<=43;age++){
+    if(age<P.pk){const t=(age-21)/(P.pk-21);c[age-7]=f21+(1-f21)*(1-(1-t)*(1-t))}
+    else if(age<=P.pk+P.pw)c[age-7]=1;
+    else{loss+=P.a+P.b*i++;c[age-7]=Math.max(.3,1-loss)}
+  }
+  FPOS[pos]=c;
+}
+// personal peak shift, from the name so it never changes (triangular, about +-2.4 years at the extremes)
+const pkShiftOf=n=>{const h=hashStr('pks|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*2.4*10)/10};
+const pksOf=p=>p.pks!=null?p.pks:(p.pks=pkShiftOf(p.n||''));
+function fAge(a,pos,sh){
+  const T=(pos&&FPOS[pos])||F;a=clamp(a,7,43);
+  if(!sh)return T[Math.round(a)-7];
+  a=clamp(a-sh*clamp((a-18)/6,0,1),7,43);
+  const i=Math.floor(a),f=a-i;return f?T[i-7]*(1-f)+T[Math.min(36,i-6)]*f:T[i-7];
+}
+const ovrAt=(pa,age,dv,pos,sh)=>clamp(Math.round(pa*fAge(age,pos,sh)+dv),25,98);
+// the years in which a player is within 1% of his best
+function primeOf(pos,sh){let lo=null,hi=null;for(let a=18;a<=40;a++){if(fAge(a,pos,sh)>=.99){if(lo==null)lo=a;hi=a}}return[lo,hi]}
 const club=id=>ST.W.clubs[id];
 const poolOf=n=>(NATS.find(x=>x[0]===n)||NATS[0])[1];
 
@@ -20,7 +46,7 @@ function addPlayer(g,c,pos,ovr,age,pa,real){
     for(let t=0;nm.has(n)&&t<14;t++)n=g.pick(pl[0])+' '+g.pick(pl[1]);
     if(nm.has(n))n+=' '+String.fromCharCode(65+g.int(0,25))+'.';
     nm.add(n)}
-  const p={id,n,nat,pos,age,pa:Math.round((pa||ovr/fAge(age))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age))):ovr};   // pk: best rating reached (estimated for veterans at the start)
+  const sh=pkShiftOf(n),p={id,n,nat,pos,age,pks:sh,pa:Math.round((pa||ovr/fAge(age,pos,sh))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age,pos,sh))):ovr};   // pk: best rating reached (estimated for veterans at the start)
   if(real&&real.fl)p.fl=1;
   if(!real)p.fk=1;   // made-up regen or signing: not a real player
   if(real&&real.gs!=null){p.gs=real.gs;p.asr=real.asr;p.pf=real.pf}
@@ -33,7 +59,7 @@ const SQT={1:26,2:25,3:24,4:23};   // first-team squad sizes clubs keep (real to
 function newArrival(g,c,pos){
   if(g.chance(.45)){   // academy graduate or young signing: potential spread around the club's level, rarely world class
     const pa=clamp(c.base-2+g.norm(0,6),45,94),age=g.int(17,19);   // academy graduates: mostly squad-level, the odd gem
-    addPlayer(g,c,pos,Math.round(pa*fAge(age)),age,pa);
+    addPlayer(g,c,pos,Math.round(pa*fAge(age,pos)),age,pa);
   }else{
     const ovr=c.base-4+g.norm(0,4)+(g.chance(.08)?g.int(3,6):0);       // squad signings come in below the starters
     addPlayer(g,c,pos,Math.round(clamp(ovr,38,93)),g.int(22,29));
@@ -70,7 +96,7 @@ function addReal(g,c,list){
       ovr=Math.round(clamp(ovr,38,95));
       // potential: young players only keep the nominal growth if their real performances back it up
       let pa,gm;
-      if(x.age<24){const rel=x.evm/(x.evm+600);gm=clamp(.8+.3*(x.pf||0)*rel-(x.evm<300?.1:0),.3,1.2);pa=Math.min(96,ovr/fAge(x.age))}
+      if(x.age<24){const rel=x.evm/(x.evm+600);gm=clamp(.8+.3*(x.pf||0)*rel-(x.evm<300?.1:0),.3,1.2);pa=Math.min(96,ovr/fAge(x.age,pos,pkShiftOf(x.n)))}
       addPlayer(g,c,pos,ovr,x.age,pa,{n:x.n,nat:x.nat,gs:x.gs,asr:x.asr,pf:x.pf,gm});
     });
     for(let r=arr.length;r<k;r++){c.fln=(c.fln||0)+1;addPlayer(g,c,pos,Math.round(c.base-6),26,undefined,{n:c.name+' reserve '+c.fln,nat:LGN[c.lg].nat,fl:1})}
@@ -163,7 +189,7 @@ function rollWorld(){
     c._bp=null;
     for(const id of c.sq.slice()){
       const p=W.pl[id],dvN=clamp(p.dv*.75+g.norm(0,1.5),-8,8),o0=p.o0!=null?p.o0:p.ovr;
-      p.age++;p.dv=dvN;const nom=ovrAt(p.pa,p.age,dvN);
+      p.age++;p.dv=dvN;const nom=ovrAt(p.pa,p.age,dvN,p.pos,pksOf(p));
       p.ovr=p.gm!=null&&p.age<=25&&nom>o0?Math.round(o0+p.gm*(nom-o0)):nom;p.o0=p.ovr;delete p.ovf;p.pk=Math.max(p.pk||p.ovr,p.ovr);
       if(p.age>=43||(p.age>=34&&g.chance((p.age-33)*.17))){p.cl=-1;W.free.push(id);c.sq=c.sq.filter(x=>x!==id)}
     }

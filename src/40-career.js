@@ -18,7 +18,7 @@ function refresh(me){
   keys.forEach((k,i)=>{A[k]=clamp(Math.round(me.base-so/sw+off[k]),1,ACAP[k]||99);ov+=w[i]*A[k]});
   me.attr=A;me.ovr=Math.round(ov/sw);me.peak=Math.max(me.peak||0,me.ovr);
   me.sc=me.pos==='GK'?0:A.sho-P.sho;me.ac=me.pos==='GK'?0:A.pas-P.pas;
-  me.p={id:'me',n:me.name,pos:me.pos,ovr:me.ovr,sc:me.sc,ac:me.ac,gm:AX.gm||1,am:AX.am||1};
+  me.p={id:'me',n:me.name,age:me.age,pos:me.pos,ovr:me.ovr,sc:me.sc,ac:me.ac,gm:AX.gm||1,am:AX.am||1};
 }
 function mval(){const me=ST.me;return valueFor(me.ovr,me.age,me.pa,me.cl>=0?club(me.cl):null)}
 // end-of-season growth; also ages the player a year
@@ -27,7 +27,7 @@ function develop(boost){
   if(me.focus){me.dev[me.focus]=Math.min(12,(me.dev[me.focus]||0)+(me.age<30?1.6:.8));me.focus=null}
   me.age++;
   me.gap=clamp(me.gap*.75+g.norm(0,1.5)+boost,-9,3);
-  me.base=me.pa*fAge(me.age)*archAge(me,me.age)+me.gap;
+  me.base=me.pa*fAge(me.age,me.pos,me.pks)*archAge(me,me.age)+me.gap;
   if(me.age>=30){const k=me.pos==='GK'?'ref':'pac';me.dev[k]=(me.dev[k]||0)-.9-(me.pos==='GK'?0:(archOf(me).pd||0))}
   refresh(me);
 }
@@ -53,9 +53,10 @@ function newCareer(o){
   let arch=o.arch,hid=0;if(!arch||arch==='random'||!ARX[o.pos][arch]){arch=g.pick(Object.keys(ARX[o.pos]));hid=o.arch==='random'?1:0}
   const me={name:o.name||'Player',nat:o.nat||'England',pos:o.pos,arch,archHidden:hid,foot:o.foot||'Right',ht:o.ht||180,pa:Math.round(pa*10)/10,tier:t.n,age:7,gap:0,dev:{},base:0,cl:-1,parent:-1,role:'youth',form:[],inj:0,sus:0,rows:[],hon:[],aw:[],moves:[],focus:null,ss:null,trust:60,caps:0,ig:0,nr:null,tx:{},a0:null,tn:0,wf:o.foot==='Both'?5:3,frame:o.frame||'Athletic'};
   me.brk=rollBrk(g,o.pos,t.n);
+  me.pks=clamp(Math.round(R(seed+'|pks').norm(0,1.1)*10)/10,-2.5,2.5);   // personal peak shift in years (see PRIME): negative peaks early, positive late
   const fp=o.pos==='GK'?'ref':'pac';
   me.dev=me.frame==='Lean Wire'?{[fp]:2,phy:-2}:me.frame==='Power Solid'?{[fp]:-2,phy:3}:{[fp]:1,phy:1};
-  me.base=me.pa*fAge(7);
+  me.base=me.pa*fAge(7);   // the early climb is shared by every position
   const season=clamp(Math.round(o.startYear)||DEFAULT_SEASON,FIRST_HIST,DEFAULT_SEASON);
   ST={v:VER,seed,phase:'youth',season,yr0:season-8,W:{pl:[],free:[],clubs:[]},me,pend:null,hof:[],stat:{n:0,g:0,hw:0,dr:0},inbox:[],archive:[],mid:1,bud:2,tour:null};
   refresh(me);genWorld();return ST;

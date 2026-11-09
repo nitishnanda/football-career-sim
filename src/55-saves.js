@@ -67,9 +67,18 @@ function upgradeSave(){
   S.news=S.news||[];S.hist=S.hist||[];S.hof=S.hof||[];S.mineLog=S.mineLog||[];S.res=S.res||{};
   me.archHidden=me.archHidden||0;me.peak=me.peak||me.ovr;if(!ARX[me.pos][me.arch]&&!ARALIAS[me.arch])me.arch=Object.keys(ARX[me.pos])[0];
   for(const k of['lg','cup','eu','yth','nat'])if(me.ss&&me.ss[k])for(const f of['dr','tk','ic','bl','du','duw','dra','past','fd','fc','sv','yc','sot'])me.ss[k][f]=me.ss[k][f]||0;
+  // v14: position-specific prime curves (see PRIME). Rescale each player's potential so today's rating is unchanged.
+  const oldF=a=>F[clamp(Math.round(a),7,43)-7];
+  if(S._from&&S._from<14){
+    me.pks=me.pks!=null?me.pks:clamp(Math.round(R(S.seed+'|pks').norm(0,1.1)*10)/10,-2.5,2.5);
+    me.pa=Math.round(me.pa*oldF(me.age)/fAge(me.age,me.pos,me.pks)*10)/10;
+    for(const p of W.pl){if(!p)continue;p.pks=pkShiftOf(p.n);p.pa=Math.round(p.pa*oldF(p.age)/fAge(p.age,p.pos,p.pks)*10)/10}
+    notes.push('position-specific peak ages');
+  }
+  if(me.pks==null)me.pks=0;
   let wages=0;
   for(const p of W.pl){if(!p)continue;
-    if(p.pk==null)p.pk=p.age>=29?Math.min(p.ovr+12,Math.round(p.ovr/fAge(p.age))):p.ovr;
+    if(p.pk==null)p.pk=p.age>=29?Math.min(p.ovr+12,Math.round(p.ovr/fAge(p.age,p.pos,pksOf(p)))):p.ovr;
     if(!Array.isArray(p.x))p.x=[];p.mn=p.mn||0;p.st=p.st||0;
   }
   for(const c of W.clubs){c._bp=null;c._av=null;for(const id of c.sq){const p=W.pl[id];if(p&&p.wg==null){p.wg=wageFor(c,wageVal(p.ovr,p.age,p.pa,c,p.pk));wages++}}}

@@ -1,0 +1,177 @@
+# name|pos|tier|born|debut|ctx|break|peak   (ctx: PL=Premier League, T5=other big-5 top flight, TF=other top flight, LL=lower league/2nd tier/non-league)
+# debut = age at first senior league minutes; break = age of first season producing near own standard (starter-level output); peak = age of best sustained level. Approximate, from memory, +-1yr
+Erling Haaland|ST|gen|2000|16|LL|19|22
+Cristiano Ronaldo|ST|gen|1985|17|TF|21|25
+Gerd Müller|ST|gen|1945|19|LL|19|25
+Harry Kane|ST|wk|1993|18|LL|21|27
+Robert Lewandowski|ST|wk|1988|19|LL|21|30
+Victor Osimhen|ST|wk|1998|19|T5|20|25
+Jamie Vardy|ST|pr|1987|19|LL|25|28
+Ciro Immobile|ST|pr|1990|18|T5|21|29
+Jonathan David|ST|pr|2000|18|TF|19|23
+Serhou Guirassy|ST|pr|1996|17|LL|26|28
+Billy Sharp|ST|gr|1986|18|LL|20|26
+Jordan Rhodes|ST|gr|1990|18|LL|20|22
+Lionel Messi|ST|gen|1987|17|T5|19|26
+Luis Suárez|ST|wk|1987|19|TF|20|28
+Karim Benzema|ST|wk|1987|17|T5|19|31
+Antoine Griezmann|ST|wk|1991|18|LL|22|25
+Roberto Firmino|ST|pr|1991|19|LL|22|27
+Paulo Dybala|ST|pr|1993|17|LL|22|24
+Ollie Watkins|ST|pr|1995|17|LL|23|27
+Chris Martin|ST|gr|1988|18|LL|21|25
+Didier Drogba|ST|gen|1978|21|LL|24|31
+Zlatan Ibrahimović|ST|wk|1981|18|LL|20|30
+Edin Džeko|ST|wk|1986|18|TF|21|28
+Olivier Giroud|ST|pr|1986|20|LL|25|30
+Niclas Füllkrug|ST|pr|1993|19|T5|29|30
+Alexander Sørloth|ST|pr|1995|18|TF|21|28
+Mateo Retegui|ST|pr|1999|19|LL|23|25
+Kieffer Moore|ST|gr|1992|20|LL|26|28
+Jordan Hugill|ST|gr|1992|19|LL|24|26
+Ronaldo (Brazilian)|ST|gen|1976|16|TF|17|21
+Thierry Henry|ST|gen|1977|17|T5|19|26
+Sergio Agüero|ST|wk|1988|15|TF|18|24
+Lautaro Martínez|ST|wk|1997|18|TF|20|26
+Alexander Isak|ST|wk|1999|17|TF|21|25
+Dušan Vlahović|ST|pr|2000|16|TF|20|23
+Dominic Solanke|ST|pr|1997|18|PL|24|26
+Ivan Toney|ST|pr|1996|18|LL|23|26
+Dwight Gayle|ST|gr|1990|19|LL|24|26
+Mohamed Salah|W|gen|1992|18|TF|21|26
+Arjen Robben|W|gen|1984|16|TF|18|26
+Raphinha|W|wk|1996|19|LL|22|28
+Son Heung-min|W|wk|1992|18|T5|21|28
+Michael Olise|W|wk|2001|17|LL|20|23
+Jarrod Bowen|W|pr|1996|17|LL|22|27
+Bryan Mbeumo|W|pr|1999|17|LL|21|25
+Antoine Semenyo|W|pr|2000|18|LL|24|25
+Luís Figo|W|gen|1972|17|TF|20|28
+Ryan Giggs|W|gen|1973|17|PL|18|24
+Khvicha Kvaratskhelia|W|wk|2001|17|TF|20|22
+Ángel Di María|W|wk|1988|17|TF|19|26
+Nico Williams|W|wk|2002|18|T5|21|23
+Jérémy Doku|W|pr|2002|17|TF|19|23
+Kingsley Coman|W|pr|1996|16|T5|21|26
+Leroy Sané|W|pr|1996|18|T5|21|25
+Neymar|W|gen|1992|17|TF|18|25
+Ronaldinho|W|gen|1980|17|TF|19|25
+Lamine Yamal|W|gen|2007|15|T5|16|17
+Ousmane Dembélé|W|wk|1997|18|T5|19|28
+Rafael Leão|W|wk|1999|18|TF|21|25
+Riyad Mahrez|W|wk|1991|19|LL|22|25
+Allan Saint-Maximin|W|pr|1997|18|T5|21|23
+Jack Grealish|W|pr|1995|18|PL|22|25
+Savinho|W|pr|2004|18|TF|19|21
+Kylian Mbappé|W|gen|1998|16|T5|18|24
+Vinícius Júnior|W|gen|2000|17|TF|21|24
+Gareth Bale|W|wk|1989|16|LL|21|25
+Adama Traoré|W|pr|1996|17|LL|22|24
+Theo Walcott|W|pr|1989|16|LL|22|24
+Daniel James|W|pr|1997|19|LL|21|22
+Zinedine Zidane|AM|gen|1972|17|T5|21|28
+Juan Román Riquelme|AM|gen|1978|18|TF|21|27
+Martin Ødegaard|AM|wk|1998|15|TF|22|25
+Mesut Özil|AM|wk|1988|18|T5|20|25
+Florian Wirtz|AM|wk|2003|17|T5|18|22
+James Maddison|AM|pr|1996|18|LL|22|27
+Dani Olmo|AM|pr|1998|18|TF|21|26
+Kaká|AM|gen|1982|18|TF|19|25
+Thomas Müller|AM|wk|1989|18|T5|20|25
+Bruno Fernandes|AM|wk|1994|17|LL|23|26
+Cole Palmer|AM|wk|2002|18|PL|21|22
+Christopher Nkunku|AM|pr|1997|18|T5|24|24
+Morgan Gibbs-White|AM|pr|1999|17|LL|22|24
+Diego Maradona|AM|gen|1960|15|TF|16|25
+Jamal Musiala|AM|wk|2003|17|T5|18|21
+Eden Hazard|AM|wk|1991|16|T5|18|24
+Eberechi Eze|AM|pr|1998|18|LL|21|26
+Rayan Cherki|AM|pr|2003|16|T5|20|22
+Xavi|CM|gen|1980|18|T5|21|29
+Andrea Pirlo|CM|gen|1979|16|T5|22|29
+Toni Kroos|CM|gen|1990|17|T5|19|28
+Luka Modrić|CM|wk|1985|17|TF|20|31
+Joshua Kimmich|CM|wk|1995|19|LL|19|26
+Frenkie de Jong|CM|wk|1997|18|TF|20|24
+Jorginho|CM|pr|1991|18|LL|22|29
+Granit Xhaka|CM|pr|1992|17|TF|19|30
+Steven Gerrard|CM|gen|1980|18|PL|21|28
+Jude Bellingham|CM|gen|2003|16|LL|19|22
+Federico Valverde|CM|wk|1998|17|TF|22|25
+Nicolò Barella|CM|wk|1997|17|T5|21|26
+Declan Rice|CM|wk|1999|18|PL|20|25
+Leon Goretzka|CM|pr|1995|17|LL|20|26
+Conor Gallagher|CM|pr|2000|19|LL|21|23
+Andrés Iniesta|CM|gen|1984|18|T5|20|27
+Kevin De Bruyne|CM|gen|1991|18|TF|21|27
+Pedri|CM|wk|2002|17|LL|17|22
+Bernardo Silva|CM|wk|1994|18|LL|20|25
+Mikel Merino|CM|pr|1996|18|LL|22|27
+Teun Koopmeiners|CM|pr|1998|18|TF|21|25
+Claude Makélélé|DM|gen|1973|18|T5|21|29
+Casemiro|DM|wk|1992|19|TF|22|27
+Aurélien Tchouaméni|DM|wk|2000|18|T5|20|24
+João Palhinha|DM|pr|1995|18|LL|25|28
+Manuel Ugarte|DM|pr|2001|18|TF|20|22
+N'Golo Kanté|DM|gen|1991|19|LL|22|26
+Moisés Caicedo|DM|wk|2001|18|TF|20|22
+Edson Álvarez|DM|wk|1997|18|TF|20|25
+Amadou Onana|DM|pr|2001|17|LL|18|22
+Youssouf Fofana|DM|pr|1999|17|T5|20|25
+Rodri|DM|gen|1996|18|T5|21|28
+Sergio Busquets|DM|gen|1988|19|LL|20|26
+Martín Zubimendi|DM|wk|1999|19|LL|22|25
+Hakan Çalhanoğlu|DM|wk|1994|17|LL|20|30
+Exequiel Palacios|DM|pr|1998|19|TF|22|25
+Dani Alves|FB|gen|1983|18|LL|21|26
+Roberto Carlos|FB|gen|1973|19|TF|22|28
+Marcelo|FB|gen|1988|17|TF|19|26
+Achraf Hakimi|FB|wk|1998|17|LL|20|26
+Alphonso Davies|FB|wk|2000|15|TF|18|20
+Theo Hernández|FB|wk|1997|18|LL|21|24
+Jeremie Frimpong|FB|pr|2000|18|TF|21|23
+Pedro Porro|FB|pr|1999|18|LL|21|23
+Alejandro Grimaldo|FB|pr|1995|18|LL|22|28
+Philipp Lahm|FB|gen|1983|19|T5|20|27
+Trent Alexander-Arnold|FB|wk|1998|18|PL|19|22
+João Cancelo|FB|wk|1994|18|TF|20|27
+Rico Lewis|FB|pr|2004|17|PL|18|21
+Oleksandr Zinchenko|FB|pr|1996|17|TF|19|25
+Paolo Maldini|FB|gen|1968|16|T5|18|28
+Dani Carvajal|FB|wk|1992|18|LL|20|26
+Kyle Walker|FB|wk|1990|18|LL|21|26
+Ben White|FB|pr|1997|19|LL|22|25
+Benjamin Pavard|FB|pr|1996|18|T5|20|25
+Fabio Cannavaro|CB|gen|1973|19|T5|21|32
+Carles Puyol|CB|gen|1978|19|LL|22|29
+Antonio Rüdiger|CB|wk|1993|19|T5|21|30
+Rúben Dias|CB|wk|1997|19|LL|21|24
+Nemanja Vidić|CB|wk|1981|18|TF|21|27
+James Tarkowski|CB|pr|1992|17|LL|19|28
+Marc Guéhi|CB|pr|2000|18|LL|19|24
+Franz Beckenbauer|CB|gen|1945|18|LL|19|28
+Virgil van Dijk|CB|gen|1991|19|LL|20|28
+Rio Ferdinand|CB|wk|1978|17|PL|19|28
+Gerard Piqué|CB|wk|1987|17|PL|19|25
+Alessandro Bastoni|CB|wk|1999|18|T5|19|24
+John Stones|CB|pr|1994|17|LL|19|29
+Nathan Aké|CB|pr|1995|18|LL|21|28
+Raphaël Varane|CB|gen|1993|17|T5|18|26
+William Saliba|CB|wk|2001|17|T5|19|23
+Ibrahima Konaté|CB|wk|1999|17|LL|18|24
+Kim Min-jae|CB|wk|1996|19|LL|20|26
+Micky van de Ven|CB|pr|2001|17|LL|18|23
+Joško Gvardiol|CB|pr|2002|17|TF|18|23
+Gianluigi Buffon|GK|gen|1978|17|T5|18|29
+Iker Casillas|GK|gen|1981|18|T5|19|28
+Thibaut Courtois|GK|wk|1992|17|TF|18|28
+Jan Oblak|GK|wk|1993|16|TF|21|26
+Gianluigi Donnarumma|GK|wk|1999|16|T5|17|25
+Jordan Pickford|GK|pr|1994|17|LL|22|27
+Emiliano Martínez|GK|pr|1992|19|LL|28|30
+Manuel Neuer|GK|gen|1986|20|T5|20|28
+Alisson|GK|wk|1992|20|TF|22|28
+Ederson|GK|wk|1993|18|LL|22|27
+Marc-André ter Stegen|GK|wk|1992|18|T5|19|28
+David Raya|GK|pr|1995|19|LL|21|28
+André Onana|GK|pr|1996|19|TF|21|26
