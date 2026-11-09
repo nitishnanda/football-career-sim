@@ -22,7 +22,9 @@ function mkComp(pk,pw,a,b){
 const COMPS=[mkComp(23,2,.010,.006),mkComp(26,3,.004,.003),mkComp(30,4,.004,.002)],SMUL=[.6,1,1.5],CNAME=['Physical','Technical','IQ'];
 const MIXP={ST:[0.35,0.53,0.11],W:[0.32,0.52,0.15],AM:[0.16,0.61,0.23],CM:[0.25,0.40,0.35],DM:[0.26,0.26,0.48],FB:[0.38,0.25,0.37],CB:[0.39,0.09,0.52],GK:[0.30,0.30,0.40]};
 const MIXA={"ST|Poacher":[.40,.50,.10],"ST|Playmaking Forward":[.25,.60,.15],"ST|Target Man":[.05,.65,.30],"ST|Complete Forward":[.35,.55,.10],"W|Inside Forward":[.35,.50,.15],"W|Traditional Winger":[.40,.55,.05],"W|Flashy Winger":[.40,.55,.05],"W|Pace Abuser":[.80,.20,0],"AM|Classic No.10":[.25,.65,.10],"AM|Shadow Striker":[.40,.55,.05],"AM|Dribbling Ten":[.70,.30,0],"CM|Deep-Lying Playmaker":[0,.20,.80],"CM|Box-to-Box":[.50,.30,.20],"CM|Advanced Creator":[.35,.35,.30],"DM|Anchor":[.25,.25,.50],"DM|Ball Winner":[.50,.30,.20],"DM|Regista":[.15,.30,.55],"FB|Attacking Wing-Back":[.40,.25,.35],"FB|Inverted Full-Back":[.55,.20,.25],"FB|Defensive Full-Back":[.40,.25,.35],"CB|Stopper":[.20,.10,.70],"CB|Ball-Playing Defender":[.20,.10,.70],"CB|Recovery Defender":[.85,.05,.10],"GK|Shot-Stopper":[.15,.35,.50],"GK|Sweeper Keeper":[.15,.35,.50]};
-const mixOf=(pos,arch)=>MIXA[pos+'|'+arch]||MIXP[pos]||[.33,.34,.33];
+// an archetype belongs to one position, but a player can be filed in another (Mbappé as a striker with a winger's pace game): its mix still applies
+const ARCHPOS={};for(const p in ARX)for(const a in ARX[p])ARCHPOS[a]=p;
+const mixOf=(pos,arch)=>MIXA[pos+'|'+arch]||MIXA[(ARCHPOS[arch]||'')+'|'+arch]||MIXP[pos]||[.33,.34,.33];
 // a component's value at an age, with a personal shift blended in between 21 and 27 (teenage development is untouched)
 function compAt(ci,a,sh){a=clamp(a,7,43);if(sh)a=clamp(a-sh*clamp((a-21)/6,0,1),7,43);const T=COMPS[ci],i=Math.floor(a),f=a-i;return f?T[i-7]*(1-f)+T[Math.min(36,i-6)]*f:T[i-7]}
 const _mx={};
