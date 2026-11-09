@@ -57,6 +57,14 @@ function squadTable(c,limit){
 
 /* ---- player and club cards (open anywhere from a name) ---- */
 const wrapM=h=>`<div class="modal"><section class="glass wide"><button class="btn alt sm mclose" data-a="closem">Close ✕</button>${h}</section></div>`;
+// another player's attributes: style, height and build, then the six groups opening to their sub-attributes, with the difference to your own player
+function vPAttrs(p){
+  const a=attrsFor(p),me=ST.me,cmp=a.sub&&me.sub&&me.pos!=='GK';
+  const diff=(v,mine)=>cmp?`<span class="m sm" style="width:34px;text-align:right;color:${mine-v>0?'#86f2bd':mine-v<0?'#ff9a9a':'inherit'}" title="You minus him">${mine-v>0?'+':''}${mine-v}</span>`:'';
+  const head=`<div class="row sp wr">${kk('Attributes')}<span class="m sm">${esc(a.arch||'')} · ${a.ht} cm · ${a.frame}</span></div>`;
+  if(!a.sub)return`<div class="tile mt">${head}<div class="mt">${GKK.map(k=>`<div class="row" style="margin:7px 0"><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${a.A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${a.A[k]}</b></div>`).join('')}</div></div>`;
+  return`<div class="tile mt">${head}<div class="mt">${GROUPS.map(([k,l])=>`<details class="atg"><summary><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${a.gd[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${a.gd[k]}</b>${diff(a.gd[k],me.gd?me.gd[k]:a.gd[k])}</summary>${l.map(j=>`<div class="sa"><span class="nm">${SL[j]}</span><div class="bar g1"><i style="width:${a.sub[j]}%"></i></div><b class="mono" style="width:26px;text-align:right">${a.sub[j]}</b>${diff(a.sub[j],cmp?me.sub[j]:null)}</div>`).join('')}</details>`).join('')}</div>${cmp?'<div class="m sm mt">Green: you are ahead. Red: he is ahead.</div>':''}</div>`;
+}
 function vPCard(id){
   const p=ST.W.pl[id];if(!p||p.cl<0)return`<h1>Retired</h1><p class="m">This player is no longer active.</p>`;
   const c=club(p.cl),me=ST.me,L=byPos(c)[p.pos]||[],rank=L.findIndex(x=>x.id===p.id)+1,k=NSL[p.pos],role=rank<=k?'Starter':rank<=k+1?'Rotation':'Squad player';
@@ -64,6 +72,7 @@ function vPCard(id){
   return`<div class="row" style="gap:16px"><div class="ovr-ring" style="--p:${p.ovr}"><b>${p.ovr}</b></div><div><h1 style="margin:0">${esc(p.n)}</h1>${kk(POSN[p.pos]+' · '+p.age+' years · '+esc(p.nat||''))}<div class="mt">${clink(c)} <span class="pill">${role}</span></div></div></div>
   <div class="grid mt2"><div class="tile">${kk('Apps')}<b class="n">${p.ap}</b></div><div class="tile">${kk('Goals')}<b class="n">${p.g}</b></div><div class="tile">${kk('Assists')}<b class="n">${p.a}</b></div><div class="tile">${kk('Avg rating')}<b class="n">${p.ap?avg.toFixed(2):'-'}</b></div><div class="tile">${kk('Value')}<b class="n">${euro(valueFor(p.ovr,p.age,p.pa,c))}</b></div></div>
   ${statLine(p)}
+  ${vPAttrs(p)}
   ${p.gs!=null?`<div class="tile mt"><h3>Evidence from recent seasons</h3><div class="row sp sm"><span>Share of his team's goals while on the pitch</span><b class="mono">${Math.round(p.gs*100)}%</b></div><div class="row sp sm"><span>Share of assists</span><b class="mono">${Math.round(p.asr*100)}%</b></div>${z!=null?`<div class="row sp sm"><span>Performance against his position</span><b>${verd}</b></div>`:''}</div>`:''}
   <div class="tile mt"><div class="row sp"><span>You (${me.ovr})</span><b class="mono">${me.ovr-p.ovr>=0?'+':''}${me.ovr-p.ovr} OVR</b><span>${esc(p.n.split(' ').pop())} (${p.ovr})</span></div></div>`;
 }

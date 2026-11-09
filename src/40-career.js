@@ -11,13 +11,8 @@ const table=lg=>sortT(ST.W.clubs.filter(c=>c.lg===lg));
 
 /* ---------- player ---------- */
 function refresh(me){
-  const keys=me.pos==='GK'?GKK:OUTK,P=PROF[me.pos],AX=archOf(me),ar=AX.att||{},w=OVW[me.pos],off={};
-  let sw=0,so=0;
-  const ag=attrAging(me,keys);
-  keys.forEach((k,i)=>{off[k]=(P[k]||0)+(ar[k]||0)+(me.dev[k]||0)+(ag[k]||0)+((FRAMEG[me.frame]||{})[k]||0);sw+=w[i];so+=w[i]*off[k]});
-  const A={};let ov=0;
-  keys.forEach((k,i)=>{const rv=me.base-so/sw+off[k];A[k]=clamp(Math.round(me.pos==='GK'?softCap(rv,ACAP[k]||99):rv),15,ACAP[k]||99);ov+=w[i]*A[k]});
-  me.attr=A;me.ovr=Math.round(ov/sw);me.peak=Math.max(me.peak||0,me.ovr);
+  const keys=me.pos==='GK'?GKK:OUTK,P=PROF[me.pos],AX=archOf(me),ar=AX.att||{},w=OVW[me.pos],G=groupAttrs(me,keys,AX.att||{}),A=G.A;
+  me.attr=A;me.ovr=G.ovr;me.peak=Math.max(me.peak||0,me.ovr);
   buildSubs(me,A);
   me.amax=me.amax||{};for(const k of keys){const v=me.gd?me.gd[k]:A[k];if(v>(me.amax[k]||0))me.amax[k]=v}   // career-best of each attribute as shown: how far the defining one has fallen
   // goal and assist share: the group attribute plus how his finishing / vision / passing stand against what is typical for the role

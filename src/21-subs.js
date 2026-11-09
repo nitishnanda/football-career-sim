@@ -114,3 +114,56 @@ function subAdj(me,stat){
   let a=0;for(const j in m)a+=m[j]*(me.subd[j]||0);
   return a;
 }
+
+// the six group attributes for any player-shaped object t (pos, arch, age, base = overall before caps, pa, shifts, frame, dev): profile for the position and
+// archetype, ageing, build, training/individual offsets; re-centred so the overall equals t.base before caps. Shared by the user's player and everyone else.
+function groupAttrs(t,keys,ar){
+  const P=PROF[t.pos],w=OVW[t.pos],off={},ag=attrAging(t,keys);let sw=0,so=0;
+  keys.forEach((k,i)=>{off[k]=(P[k]||0)+(ar[k]||0)+((t.dev&&t.dev[k])||0)+(ag[k]||0)+((FRAMEG[t.frame]||{})[k]||0);sw+=w[i];so+=w[i]*off[k]});
+  const A={};let ov=0;
+  keys.forEach((k,i)=>{const rv=t.base-so/sw+off[k];A[k]=clamp(Math.round(t.pos==='GK'?softCap(rv,ACAP[k]||99):rv),15,ACAP[k]||99);ov+=w[i]*A[k]});
+  return{A,ovr:Math.round(ov/sw)};
+}
+
+/* ---------- everyone else ---------- */
+// Other players have no stored attributes: they are worked out on demand from overall, position, age and potential with the same machinery as the
+// user's player (profile, ageing, caps, build), plus a style, a height and individual variation that come from the player's name so they never change.
+const hashU=s=>hashStr(s)%100000/100000,tri=s=>hashU(s+'a')+hashU(s+'b')-1;   // uniform 0-1; triangular -1..1
+let _REFA=null;
+// the archetype a real example player is cited for (src/11-arch.js refs), if it is in his position
+function refArch(p){
+  if(!_REFA){_REFA={};for(const pos in ARX)for(const a in ARX[pos])for(const t in ARX[pos][a].refs)for(const n of ARX[pos][a].refs[t])(_REFA[norm0(n)]=_REFA[norm0(n)]||[]).push([pos,a])}
+  const l=_REFA[norm0(p.n||'')];if(!l)return null;const m=l.find(x=>x[0]===p.pos);return m?m[1]:null;
+}
+function archFor(p){
+  const r=refArch(p);if(r)return r;
+  const list=Object.keys(ARX[p.pos]||{});if(!list.length)return null;
+  // evidence: how much he creates against how much he scores, compared with the archetypes' own goal and assist multipliers
+  if(p.gs!=null&&p.asr!=null&&PRI.g&&PRI.g[p.pos]&&PRI.a&&PRI.a[p.pos]){
+    const r2=Math.log(Math.max(.05,p.asr/PRI.a[p.pos])/Math.max(.05,p.gs/PRI.g[p.pos]));let best=null;
+    for(const a of list){const x=ARX[p.pos][a],d=Math.abs(Math.log((x.am||1)/(x.gm||1))-r2*.5)+hashU(p.n+'|a'+a)*.35;if(!best||d<best.d)best={a,d}}
+    return best.a;
+  }
+  return list[hashStr('arch|'+p.n)%list.length];
+}
+const HTM={GK:190,CB:186,ST:183,DM:181,CM:179,FB:177,AM:176,W:176};
+// heights of the example players (from memory, about +-2 cm) and the builds that are obvious (L = lean wire, P = power solid); everyone else is generated
+const REFH="Erling Haaland:194,Cristiano Ronaldo:187,Gerd Müller:176,Harry Kane:188,Robert Lewandowski:185,Victor Osimhen:186,Jamie Vardy:179,Ciro Immobile:185,Jonathan David:180,Serhou Guirassy:187,Billy Sharp:178,Jordan Rhodes:188,Lionel Messi:170,Luis Suárez:182,Karim Benzema:185,Antoine Griezmann:176,Roberto Firmino:181,Paulo Dybala:177,Ollie Watkins:180,Chris Martin:188,Didier Drogba:189,Zlatan Ibrahimović:195,Edin Džeko:193,Olivier Giroud:192,Niclas Füllkrug:189,Alexander Sørloth:194,Mateo Retegui:186,Kieffer Moore:196,Jordan Hugill:188,Ronaldo (Brazilian):183,Thierry Henry:188,Sergio Agüero:173,Lautaro Martínez:174,Alexander Isak:192,Dušan Vlahović:190,Dominic Solanke:187,Ivan Toney:179,Dwight Gayle:173,Mohamed Salah:175,Arjen Robben:180,Raphinha:176,Son Heung-min:183,Michael Olise:184,Jarrod Bowen:178,Bryan Mbeumo:171,Antoine Semenyo:178,Luís Figo:180,Ryan Giggs:179,Khvicha Kvaratskhelia:183,Ángel Di María:180,Nico Williams:181,Jérémy Doku:171,Kingsley Coman:180,Leroy Sané:183,Neymar:175,Ronaldinho:181,Lamine Yamal:180,Ousmane Dembélé:178,Rafael Leão:188,Riyad Mahrez:179,Allan Saint-Maximin:173,Jack Grealish:180,Savinho:176,Kylian Mbappé:178,Vinícius Júnior:176,Gareth Bale:183,Adama Traoré:178,Theo Walcott:175,Daniel James:168,Zinedine Zidane:185,Juan Román Riquelme:182,Martin Ødegaard:178,Mesut Özil:180,Florian Wirtz:177,James Maddison:175,Dani Olmo:179,Kaká:186,Thomas Müller:185,Bruno Fernandes:179,Cole Palmer:185,Christopher Nkunku:175,Morgan Gibbs-White:178,Diego Maradona:165,Jamal Musiala:184,Eden Hazard:175,Eberechi Eze:178,Rayan Cherki:177,Xavi:170,Andrea Pirlo:177,Toni Kroos:183,Luka Modrić:172,Joshua Kimmich:177,Frenkie de Jong:180,Jorginho:180,Granit Xhaka:185,Steven Gerrard:183,Jude Bellingham:186,Federico Valverde:182,Nicolò Barella:172,Declan Rice:188,Leon Goretzka:189,Conor Gallagher:182,Andrés Iniesta:171,Kevin De Bruyne:181,Pedri:174,Bernardo Silva:173,Mikel Merino:189,Teun Koopmeiners:184,Claude Makélélé:174,Casemiro:185,Aurélien Tchouaméni:187,João Palhinha:190,Manuel Ugarte:182,N'Golo Kanté:168,Moisés Caicedo:185,Edson Álvarez:187,Amadou Onana:195,Youssouf Fofana:185,Rodri:191,Sergio Busquets:189,Martín Zubimendi:181,Hakan Çalhanoğlu:178,Exequiel Palacios:177,Dani Alves:172,Roberto Carlos:168,Marcelo:174,Achraf Hakimi:181,Alphonso Davies:183,Theo Hernández:184,Jeremie Frimpong:171,Pedro Porro:176,Alejandro Grimaldo:171,Philipp Lahm:170,Trent Alexander-Arnold:180,João Cancelo:182,Rico Lewis:170,Oleksandr Zinchenko:175,Paolo Maldini:186,Dani Carvajal:173,Kyle Walker:183,Ben White:186,Benjamin Pavard:186,Fabio Cannavaro:176,Carles Puyol:178,Antonio Rüdiger:190,Rúben Dias:187,Nemanja Vidić:189,James Tarkowski:185,Marc Guéhi:182,Franz Beckenbauer:181,Virgil van Dijk:193,Rio Ferdinand:189,Gerard Piqué:194,Alessandro Bastoni:190,John Stones:188,Nathan Aké:180,Raphaël Varane:191,William Saliba:192,Ibrahima Konaté:194,Kim Min-jae:190,Micky van de Ven:193,Joško Gvardiol:185,Gianluigi Buffon:192,Iker Casillas:185,Thibaut Courtois:199,Jan Oblak:188,Gianluigi Donnarumma:196,Jordan Pickford:185,Emiliano Martínez:195,Manuel Neuer:193,Alisson:191,Ederson:188,Marc-André ter Stegen:187,David Raya:183,André Onana:190";
+const REFF="Lean:Lamine Yamal,Mesut Özil,Andrea Pirlo,Xavi,Andrés Iniesta,Luka Modrić,Bernardo Silva,Pedri,Bryan Mbeumo,Jérémy Doku,Neymar,Theo Walcott,Daniel James,N'Golo Kanté,Dani Alves,Jeremie Frimpong,Alejandro Grimaldo,Philipp Lahm,Allan Saint-Maximin,Riyad Mahrez,Ángel Di María,Rafael Leão,Jamal Musiala,Florian Wirtz,Savinho|Power:Erling Haaland,Zlatan Ibrahimović,Didier Drogba,Olivier Giroud,Niclas Füllkrug,Kieffer Moore,Jordan Hugill,Nemanja Vidić,Antonio Rüdiger,Casemiro,João Palhinha,Kim Min-jae,Ibrahima Konaté,Roberto Carlos,Diego Maradona,Virgil van Dijk,Steven Gerrard,Kalidou Koulibaly,Edin Džeko,Romelu Lukaku,Gianluigi Buffon,Thibaut Courtois,Amadou Onana";
+let _REFHT=null,_REFFR=null;
+function refTables(){
+  if(_REFHT)return;_REFHT={};_REFFR={};
+  for(const x of REFH.split(','))(i=>{_REFHT[norm0(x.slice(0,i))]=+x.slice(i+1)})(x.lastIndexOf(':'));
+  for(const g of REFF.split('|')){const[f,l]=g.split(':');for(const n of l.split(','))_REFFR[norm0(n)]=f==='Lean'?'Lean Wire':'Power Solid'}
+}
+const htFor=p=>{refTables();const h=_REFHT[norm0(p.n||'')];return h||clamp(Math.round((HTM[p.pos]||180)+tri(p.n+'|h')*13),160,203)};
+function frameFor(p,ht){refTables();const f=_REFFR[norm0(p.n||'')];if(f)return f;const h=hashU(p.n+'|f');return(ht>=187&&h<.55)||h>.9?'Power Solid':(ht<=175&&h<.55)||h<.1?'Lean Wire':'Athletic'}
+function attrsFor(p){
+  const arch=archFor(p),ht=htFor(p),frame=frameFor(p,ht),sh=shiftsOf(p),gk=p.pos==='GK';
+  const t={pos:p.pos,arch,age:p.age,base:p.ovr,pa:p.pa,pks:sh[0],tks:sh[1],iqs:sh[2],frame,ht,n:p.n,dev:{},sdev:{},smax:{}};
+  const keys=gk?GKK:OUTK,ar=(ARX[p.pos]&&ARX[p.pos][arch]&&ARX[p.pos][arch].att)||{};
+  for(const k of keys)t.dev[k]=tri(p.n+'|g'+k)*5;
+  const G=groupAttrs(t,keys,ar);
+  if(!gk){for(const j of SUBK)t.sdev[j]=tri(p.n+'|s'+j)*8.5;buildSubs(t,G.A)}
+  return{arch,ht,frame,A:G.A,sub:t.sub||null,gd:t.gd||null};
+}
