@@ -300,3 +300,14 @@ details.dsc summary{cursor:pointer;color:var(--tx);padding:10px 4px}details.dsc[
 .sa .bar{height:5px}
 .btn.xs{padding:3px 9px;font-size:11px;border-radius:999px}
 .xi .pl .pp-l{display:block;font-style:normal;font:700 9px var(--sans);letter-spacing:.08em;opacity:.6;margin-top:1px}
+/* rating breakdown */
+.rn{background:#8b93a1;color:#0d0f0e}
+.bkhead{display:flex;justify-content:space-between;margin:2px 0 6px;opacity:.7}
+.bkrow{display:flex;align-items:center;gap:10px;margin:8px 0 3px}
+.bkrow .nm{width:86px;font-size:13px}
+.bkbar{position:relative;flex:1;height:10px;border-radius:6px;background:rgba(255,255,255,.07)}
+.bkbar::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:rgba(255,255,255,.4);border-radius:1px;z-index:1}
+.bkbar i{position:absolute;top:0;bottom:0;border-radius:6px}
+.bkmeta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px 96px}
+.bkstrip{display:flex;gap:3px;flex-wrap:wrap}
+.bkstrip i{width:11px;height:11px;border-radius:3px;display:block}

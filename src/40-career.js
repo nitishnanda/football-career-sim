@@ -189,6 +189,7 @@ function mkReport(res,kind,lab,hc,ac,pl){
       if(!me.natProven&&(me.natSquadApps||0)>=3&&me.natRs/me.natRn>=6.9)me.natProven=1;
     }
     if(me.pos==='GK'&&ga===0&&m.min>=60)s.cs++;
+    if(m.bd&&m.min>=20)bkAdd(me,m.bd);   // the average game for this role
     me.form.push(m.rating);if(me.form.length>10)me.form.shift();
     if(pl.red){me.sus=1;r.red=1}
     if(pl.inj){
@@ -196,7 +197,7 @@ function mkReport(res,kind,lab,hc,ac,pl){
       if(pl.inj.w>=12)injuryCost(me,pl.inj);
     }
   }
-  ST.mineLog.push({c:lab,o:sd?hc.name:ac.name,h:sd?0:1,gf,ga,rt:res.me?res.me.rating:null,g:res.me?res.me.g:0,a:res.me?res.me.a:0,m:pl.mode,mn:res.me?res.me.min:0,wk:r.wk});
+  ST.mineLog.push({c:lab,o:sd?hc.name:ac.name,h:sd?0:1,gf,ga,rt:res.me?res.me.rating:null,bd:res.me&&res.me.bd?res.me.bd.c:null,g:res.me?res.me.g:0,a:res.me?res.me.a:0,m:pl.mode,mn:res.me?res.me.min:0,wk:r.wk});
   ST.hist=ST.hist||[];ST.hist.unshift(r);if(ST.hist.length>40)ST.hist.pop();
   return r;
 }
