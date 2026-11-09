@@ -27,6 +27,15 @@ function fAge(a,pos,sh){
   const i=Math.floor(a),f=a-i;return f?T[i-7]*(1-f)+T[Math.min(36,i-6)]*f:T[i-7];
 }
 const ovrAt=(pa,age,dv,pos,sh)=>clamp(Math.round(pa*fAge(age,pos,sh)+dv),25,98);
+/* Statistical prime: when a player actually puts up numbers. Experience (movement, finishing and passing decisions, reading the game)
+   keeps adding after the body peaks, so output peaks later than ability and has its own, wider personal shift (sks, about +-4 years):
+   Neymar-types peak at 23-26, Salah-types at 30+. A bell around sp+sks adds up to STB (10%) to goal and assist share; see statF in 30-match.js. */
+const STATP={ST:28,W:27,AM:27,CM:28,DM:28,FB:27,CB:29,GK:30},STB=.10,STH=4;
+const sksOf=p=>p.sks!=null?p.sks:(p.sks=sksShiftOf(p.n||''));
+const sksShiftOf=n=>{const h=hashStr('sks|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*4*10)/10};   // triangular, up to +-4
+const statBell=(age,pos,sks)=>{const x=(age-(STATP[pos]||28)-(sks||0))/STH;return Math.exp(-x*x)};
+// the years in which the experience bonus is at 70% of its maximum or better (about a five-year window)
+function statPrimeOf(pos,sks){let lo=null,hi=null;for(let a=16;a<=42;a++){if(statBell(a,pos,sks)>=.7){if(lo==null)lo=a;hi=a}}return[lo,hi]}
 // the years in which a player is within 1% of his best
 function primeOf(pos,sh){let lo=null,hi=null;for(let a=18;a<=40;a++){if(fAge(a,pos,sh)>=.99){if(lo==null)lo=a;hi=a}}return[lo,hi]}
 const club=id=>ST.W.clubs[id];
@@ -46,7 +55,7 @@ function addPlayer(g,c,pos,ovr,age,pa,real){
     for(let t=0;nm.has(n)&&t<14;t++)n=g.pick(pl[0])+' '+g.pick(pl[1]);
     if(nm.has(n))n+=' '+String.fromCharCode(65+g.int(0,25))+'.';
     nm.add(n)}
-  const sh=pkShiftOf(n),p={id,n,nat,pos,age,pks:sh,pa:Math.round((pa||ovr/fAge(age,pos,sh))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age,pos,sh))):ovr};   // pk: best rating reached (estimated for veterans at the start)
+  const sh=pkShiftOf(n),p={id,n,nat,pos,age,pks:sh,sks:sksShiftOf(n),pa:Math.round((pa||ovr/fAge(age,pos,sh))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age,pos,sh))):ovr};   // pk: best rating reached (estimated for veterans at the start)
   if(real&&real.fl)p.fl=1;
   if(!real)p.fk=1;   // made-up regen or signing: not a real player
   if(real&&real.gs!=null){p.gs=real.gs;p.asr=real.asr;p.pf=real.pf}

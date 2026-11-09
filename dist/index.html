@@ -1422,6 +1422,15 @@ function fAge(a,pos,sh){
   const i=Math.floor(a),f=a-i;return f?T[i-7]*(1-f)+T[Math.min(36,i-6)]*f:T[i-7];
 }
 const ovrAt=(pa,age,dv,pos,sh)=>clamp(Math.round(pa*fAge(age,pos,sh)+dv),25,98);
+/* Statistical prime: when a player actually puts up numbers. Experience (movement, finishing and passing decisions, reading the game)
+   keeps adding after the body peaks, so output peaks later than ability and has its own, wider personal shift (sks, about +-4 years):
+   Neymar-types peak at 23-26, Salah-types at 30+. A bell around sp+sks adds up to STB (10%) to goal and assist share; see statF in 30-match.js. */
+const STATP={ST:28,W:27,AM:27,CM:28,DM:28,FB:27,CB:29,GK:30},STB=.10,STH=4;
+const sksOf=p=>p.sks!=null?p.sks:(p.sks=sksShiftOf(p.n||''));
+const sksShiftOf=n=>{const h=hashStr('sks|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*4*10)/10};   // triangular, up to +-4
+const statBell=(age,pos,sks)=>{const x=(age-(STATP[pos]||28)-(sks||0))/STH;return Math.exp(-x*x)};
+// the years in which the experience bonus is at 70% of its maximum or better (about a five-year window)
+function statPrimeOf(pos,sks){let lo=null,hi=null;for(let a=16;a<=42;a++){if(statBell(a,pos,sks)>=.7){if(lo==null)lo=a;hi=a}}return[lo,hi]}
 // the years in which a player is within 1% of his best
 function primeOf(pos,sh){let lo=null,hi=null;for(let a=18;a<=40;a++){if(fAge(a,pos,sh)>=.99){if(lo==null)lo=a;hi=a}}return[lo,hi]}
 const club=id=>ST.W.clubs[id];
@@ -1441,7 +1450,7 @@ function addPlayer(g,c,pos,ovr,age,pa,real){
     for(let t=0;nm.has(n)&&t<14;t++)n=g.pick(pl[0])+' '+g.pick(pl[1]);
     if(nm.has(n))n+=' '+String.fromCharCode(65+g.int(0,25))+'.';
     nm.add(n)}
-  const sh=pkShiftOf(n),p={id,n,nat,pos,age,pks:sh,pa:Math.round((pa||ovr/fAge(age,pos,sh))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age,pos,sh))):ovr};   // pk: best rating reached (estimated for veterans at the start)
+  const sh=pkShiftOf(n),p={id,n,nat,pos,age,pks:sh,sks:sksShiftOf(n),pa:Math.round((pa||ovr/fAge(age,pos,sh))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age,pos,sh))):ovr};   // pk: best rating reached (estimated for veterans at the start)
   if(real&&real.fl)p.fl=1;
   if(!real)p.fk=1;   // made-up regen or signing: not a real player
   if(real&&real.gs!=null){p.gs=real.gs;p.asr=real.asr;p.pf=real.pf}
@@ -1644,11 +1653,14 @@ function strength(xi){
 const PRI=REAL.priors||{g:{},a:{}};
 // share of his team's goals/assists while on the pitch: his own evidence-based record if we have one, else the real position average scaled by quality
 const CG={ST:.078,W:.14,AM:.097,CM:.075,DM:.045,FB:.055,CB:.045,GK:0},CA={ST:.045,W:.07,AM:.07,CM:.05,DM:.04,FB:.05,CB:.04,GK:0};   // how fast a player's share grows with quality over his team's XI
-// Experience: a teenager with the same overall as a prime-age player still gets fewer goals and assists (strength, positioning, composure).
+// Experience: a teenager with the same overall as a prime-age player still gets fewer goals and assists (strength, positioning, composure),
+// and a player in his statistical prime gets a few more than his ability alone says.
 // Only applied to simulated shares; a real player's measured share (p.gs / p.asr) already reflects his own record.
 const YTHF=a=>a>=22?1:a>=21?.97:a>=20?.93:a>=19?.89:a>=18?.84:a>=17?.78:.72;
-function gshare(x,ref){const p=x.p;if(p.gs!=null)return p.gs;const mu=PRI.g[x.pos],d=clamp((p.sc||p.ovr)-ref,-12,10),y=p.age!=null?YTHF(p.age):1;return mu==null?(x.pos==='GK'?0:SCW[x.pos]/23.4*Math.exp((CG[x.pos]||.04)*(d-6))*y):mu*Math.exp((CG[x.pos]||.04)*(d-6))*(p.gm||1)*y}
-function ashare(x,ref){const p=x.p;if(p.asr!=null)return p.asr;const mu=PRI.a[x.pos],d=clamp((p.ac||p.ovr)-ref,-12,10),y=p.age!=null?YTHF(p.age):1;return mu==null?ASW[x.pos]/20*Math.exp((CA[x.pos]||.04)*(d-3))*y:mu*Math.exp((CA[x.pos]||.04)*(d-3))*(p.am||1)*y}
+// output multiplier: the teenage ramp, times the experience bonus that peaks at the player's own statistical prime
+const statF=p=>p.age==null?1:YTHF(p.age)*(1+STB*statBell(p.age,p.pos,sksOf(p)));
+function gshare(x,ref){const p=x.p;if(p.gs!=null)return p.gs;const mu=PRI.g[x.pos],d=clamp((p.sc||p.ovr)-ref,-12,10),y=statF(p);return mu==null?(x.pos==='GK'?0:SCW[x.pos]/23.4*Math.exp((CG[x.pos]||.04)*(d-6))*y):mu*Math.exp((CG[x.pos]||.04)*(d-6))*(p.gm||1)*y}
+function ashare(x,ref){const p=x.p;if(p.asr!=null)return p.asr;const mu=PRI.a[x.pos],d=clamp((p.ac||p.ovr)-ref,-12,10),y=statF(p);return mu==null?ASW[x.pos]/20*Math.exp((CA[x.pos]||.04)*(d-3))*y:mu*Math.exp((CA[x.pos]||.04)*(d-3))*(p.am||1)*y}
 function allocate(xi,n,g,L){
   const evs=[],cnt=new Map(),st=xi.filter(x=>!x.sub),ref=st.reduce((s,x)=>s+x.p.ovr,0)/st.length;
   for(let i=0;i<n;i++){
@@ -1864,7 +1876,7 @@ function refresh(me){
   keys.forEach((k,i)=>{A[k]=clamp(Math.round(me.base-so/sw+off[k]),1,ACAP[k]||99);ov+=w[i]*A[k]});
   me.attr=A;me.ovr=Math.round(ov/sw);me.peak=Math.max(me.peak||0,me.ovr);
   me.sc=me.pos==='GK'?0:A.sho-P.sho;me.ac=me.pos==='GK'?0:A.pas-P.pas;
-  me.p={id:'me',n:me.name,age:me.age,pos:me.pos,ovr:me.ovr,sc:me.sc,ac:me.ac,gm:AX.gm||1,am:AX.am||1};
+  me.p={id:'me',n:me.name,age:me.age,sks:me.sks||0,pos:me.pos,ovr:me.ovr,sc:me.sc,ac:me.ac,gm:AX.gm||1,am:AX.am||1};
 }
 function mval(){const me=ST.me;return valueFor(me.ovr,me.age,me.pa,me.cl>=0?club(me.cl):null)}
 // end-of-season growth; also ages the player a year
@@ -1899,6 +1911,7 @@ function newCareer(o){
   let arch=o.arch,hid=0;if(!arch||arch==='random'||!ARX[o.pos][arch]){arch=g.pick(Object.keys(ARX[o.pos]));hid=o.arch==='random'?1:0}
   const me={name:o.name||'Player',nat:o.nat||'England',pos:o.pos,arch,archHidden:hid,foot:o.foot||'Right',ht:o.ht||180,pa:Math.round(pa*10)/10,tier:t.n,age:7,gap:0,dev:{},base:0,cl:-1,parent:-1,role:'youth',form:[],inj:0,sus:0,rows:[],hon:[],aw:[],moves:[],focus:null,ss:null,trust:60,caps:0,ig:0,nr:null,tx:{},a0:null,tn:0,wf:o.foot==='Both'?5:3,frame:o.frame||'Athletic'};
   me.brk=rollBrk(g,o.pos,t.n);
+  me.sks=clamp(Math.round(R(seed+'|sks').norm(0,1.8)*10)/10,-4,4);   // personal statistical-prime shift (see STATP)
   me.pks=clamp(Math.round(R(seed+'|pks').norm(0,1.1)*10)/10,-2.5,2.5);   // personal peak shift in years (see PRIME): negative peaks early, positive late
   const fp=o.pos==='GK'?'ref':'pac';
   me.dev=me.frame==='Lean Wire'?{[fp]:2,phy:-2}:me.frame==='Power Solid'?{[fp]:-2,phy:3}:{[fp]:1,phy:1};
@@ -3399,17 +3412,18 @@ function careerTable(){
   const rs=ST.me.rows;if(!rs.length)return'<div class="m sm">No seasons yet.</div>';
   return`<div style="overflow-x:auto"><table class="tb"><tr><th>Season</th><th>Age</th><th>Club</th><th class="r">Apps</th><th class="r">G</th><th class="r">A</th><th class="r">Avg</th><th class="r">OVR</th></tr>`+rs.map(r=>`<tr><td>${r.s}</td><td>${r.age}</td><td>${esc(r.club)}${r.loan?' (L)':''}${'🏆'.repeat(r.hon||0)}</td><td class="r">${r.ap}${r.y?`<span class="m"> +${r.y.ap}</span>`:''}</td><td class="r">${r.g}${r.y?`<span class="m"> +${r.y.g}</span>`:''}</td><td class="r">${r.a}</td><td class="r">${r.avg?r.avg.toFixed(2):'-'}</td><td class="r">${r.youth?'<span class="m">-</span>':r.ovr}</td></tr>`).join('')+'</table></div><div class="m sm" style="margin-top:6px">+n = youth games · academy years aren\'t scouted for an OVR</div>';
 }
-// the window in which the player is within 2% of his best, and where he is relative to it
+// Two primes: the physical one (ability within 1% of its best) and the statistical one (when output peaks), each with where the player is now
 function primeTxt(me){
-  const[lo,hi]=primeOf(me.pos,me.pks||0);
-  return[lo+'-'+hi,me.age<lo?'Rising: '+(lo-me.age)+' yr'+(lo-me.age>1?'s':'')+' to go':me.age<=hi?'In his prime':'Past his prime'];
+  const ph=primeOf(me.pos,me.pks||0),st=statPrimeOf(me.pos,me.sks||0);
+  const where=(w,a,now,past)=>a<w[0]?'Rising: '+(w[0]-a)+' yr'+(w[0]-a>1?'s':'')+' to go':a<=w[1]?now:past;
+  return{ph:[ph[0]+'-'+ph[1],where(ph,me.age,'Body in its prime','Body past its best')],st:[st[0]+'-'+st[1],where(st,me.age,'Output at its peak','Output past its peak')]};
 }
 function vCareer(){
   const me=ST.me,A=me.attr,v=mval(),wt=Math.round((me.ht-100)*WMUL[me.frame||'Athletic']);
   return`<div class="g12">${G('pad s4',`<div class="row" style="gap:16px"><div class="ovr-ring" style="--p:${me.ovr}"><b>${me.ovr}</b></div><div><b style="font-size:20px">${esc(me.name)}</b><br>${kk(POSN[me.pos]+' · '+archName(me))}<br><span class="sm">${stars(me.pa)}</span> <span class="m sm">${esc(me.tier)}</span></div></div>
   <div class="mt">${keysOf(me).map(k=>`<div class="row" style="margin:9px 0"><span style="width:88px" class="sm">${KL[k]}</span><div class="bar g1"><i style="width:${A[k]}%"></i></div><b class="mono" style="width:26px;text-align:right">${A[k]}</b></div>`).join('')}</div>
   <div class="tile mt sm"><div class="row sp"><span class="m">Frame</span><span>${me.frame||'Athletic'} · ${me.ht} cm · ${wt} kg</span></div><div class="row sp"><span class="m">Foot</span><span>${me.foot} · weak foot ${'★'.repeat(me.wf||3)}</span></div><div class="row sp"><span class="m">Nationality</span><span>${esc(me.nat)}</span></div></div>`)}
-  <div class="s8" style="display:grid;gap:16px">${G('pad',`<h2>Contract & value</h2><div class="grid"><div class="tile">${kk('Value')}<b class="n">${euro(v)}</b></div><div class="tile">${kk('Wage / wk')}<b class="n">${me.ct?'€'+me.ct.w+'k':'-'}</b></div><div class="tile">${kk('Expires')}<b class="n">${me.ct?me.ct.exp:'-'}</b></div><div class="tile">${kk('Peak OVR')}<b class="n">${me.peak}</b></div><div class="tile">${kk('Prime years')}<b class="n">${primeTxt(me)[0]}</b><span class="m sm">${primeTxt(me)[1]}</span></div></div>${me.moves.length?`<div class="m sm mt">${me.moves.map(m=>`${m.s}: ${m.k==='loan'?'loan':m.k==='return'?'returned':'moved'} ${esc(m.from)} → ${esc(m.to)}`).join('<br>')}</div>`:''}`)}
+  <div class="s8" style="display:grid;gap:16px">${G('pad',`<h2>Contract & value</h2><div class="grid"><div class="tile">${kk('Value')}<b class="n">${euro(v)}</b></div><div class="tile">${kk('Wage / wk')}<b class="n">${me.ct?'€'+me.ct.w+'k':'-'}</b></div><div class="tile">${kk('Expires')}<b class="n">${me.ct?me.ct.exp:'-'}</b></div><div class="tile">${kk('Peak OVR')}<b class="n">${me.peak}</b></div><div class="tile">${kk('Physical prime')}<b class="n">${primeTxt(me).ph[0]}</b><span class="m sm">${primeTxt(me).ph[1]}</span></div><div class="tile">${kk('Statistical prime')}<b class="n">${primeTxt(me).st[0]}</b><span class="m sm">${primeTxt(me).st[1]}</span></div></div>${me.moves.length?`<div class="m sm mt">${me.moves.map(m=>`${m.s}: ${m.k==='loan'?'loan':m.k==='return'?'returned':'moved'} ${esc(m.from)} → ${esc(m.to)}`).join('<br>')}</div>`:''}`)}
   ${G('pad',`<h2>National team ${kk(esc(me.nat))}</h2><div class="grid"><div class="tile">${kk('Status')}<b class="n" style="font-size:19px">${me.nr==='starter'?'First choice':me.nr==='squad'?'In the squad':me.age<16?'Not eligible yet':'Not selected'}</b></div><div class="tile">${kk('Caps')}<b class="n">${me.caps}</b></div><div class="tile">${kk('Goals')}<b class="n">${me.ig}</b></div><div class="tile">${kk('Assists')}<b class="n">${me.ina||0}</b></div><div class="tile">${kk('Avg rating')}<b class="n">${me.natRn?(me.natRs/me.natRn).toFixed(2):'-'}</b></div><div class="tile">${kk('Tournaments won')}<b class="n">${me.hon.filter(h=>h.t==='World Cup'||h.t==='European Championship').length}</b></div></div>`)}
   ${G('pad',`<h2>Career</h2>${careerTable()}`)}</div>
   ${vTrain()}${vRadar()}${vLog()}
@@ -4287,6 +4301,7 @@ function upgradeSave(){
     notes.push('position-specific peak ages');
   }
   if(me.pks==null)me.pks=0;
+  if(me.sks==null)me.sks=clamp(Math.round(R(S.seed+'|sks').norm(0,1.8)*10)/10,-4,4);
   let wages=0;
   for(const p of W.pl){if(!p)continue;
     if(p.pk==null)p.pk=p.age>=29?Math.min(p.ovr+12,Math.round(p.ovr/fAge(p.age,p.pos,pksOf(p)))):p.ovr;

@@ -76,6 +76,7 @@ function upgradeSave(){
     notes.push('position-specific peak ages');
   }
   if(me.pks==null)me.pks=0;
+  if(me.sks==null)me.sks=clamp(Math.round(R(S.seed+'|sks').norm(0,1.8)*10)/10,-4,4);
   let wages=0;
   for(const p of W.pl){if(!p)continue;
     if(p.pk==null)p.pk=p.age>=29?Math.min(p.ovr+12,Math.round(p.ovr/fAge(p.age,p.pos,pksOf(p)))):p.ovr;
