@@ -1,8 +1,8 @@
 let TAB='home',LGV=0,UIM=null,COMPACT=false,BRK=false,INB={f:'all',sel:null,log:0};
 const CF={name:'',nat:'England',pos:'ST',side:'R',arch:'Poacher',foot:'Right',ht:182,frame:'Athletic',tier:'random',seed:'',era:2026};
-const PPOS={GK:[6,50],CB:[21,50],FB:[27,12],DM:[38,50],CM:[52,34],AM:[64,66],LW:[76,12],RW:[76,88],ST:[91,50]};
+const PPOS={GK:[6,50],CB:[21,50],LB:[27,12],RB:[27,88],DM:[38,50],CM:[52,34],AM:[64,66],LW:[76,12],RW:[76,88],ST:[91,50]};
 // the create screen picks LW or RW; the engine position stays W and the side is kept separately
-const cfSel=p=>p==='LW'?CF.pos==='W'&&CF.side!=='R':p==='RW'?CF.pos==='W'&&CF.side==='R':CF.pos===p;
+const cfSel=p=>p==='LW'||p==='RW'?CF.pos==='W'&&(CF.side==='R')===(p==='RW'):p==='LB'||p==='RB'?CF.pos==='FB'&&(CF.side==='R')===(p==='RB'):CF.pos===p;
 const cfName=()=>pname({pos:CF.pos,sd:CF.side});
 const FRAMES=['Lean Wire','Athletic','Power Solid'],WMUL={'Lean Wire':.78,Athletic:.88,'Power Solid':.98};
 const DIR={pac:'Sprint mechanics & acceleration',sho:'Finishing patterns & shot technique',pas:'Ball progression & key passes',dri:'Close control & 1v1 take-ons',def:'Positioning & tackling timing',phy:'Strength & endurance block',div:'Diving range & recovery',han:'Handling & claiming crosses',kic:'Distribution & kicking',ref:'Reflex & reaction work',pos:'Positioning & sweeping'};
@@ -65,7 +65,7 @@ function vCreate(){
   <label>${kk('Frame archetype')}<div class="row">${FRAMES.map(f=>`<button class="btn alt g1 sm ${CF.frame===f?'on':''}" data-a="cf" data-k="frame" data-v="${f}">${f}</button>`).join('')}</div></label>
   <label>${kk('Seed (optional)')}<input data-f="seed" value="${esc(CF.seed)}" placeholder="same seed, same league"></label></div>
   <div class="tile mt"><b>Homegrown status</b><br><span class="m sm">Seasons at an academy before 21 count towards squad homegrown quotas.</span></div>`)}
-  ${G('pad s4',`<h2>Tactical matrix ${kk('selected: '+(CF.pos==='W'?(CF.side==='R'?'RW':'LW'):CF.pos))}</h2><div class="pitch">${Object.entries(PPOS).map(([p,[x,y]])=>`<button class="pp ${cfSel(p)?'on':''}" style="left:${x}%;top:${y}%" data-a="cf" data-k="pos" data-v="${p}">${p}</button>`).join('')}</div>
+  ${G('pad s4',`<h2>Tactical matrix ${kk('selected: '+plab({pos:CF.pos,sd:CF.side}))}</h2><div class="pitch">${Object.entries(PPOS).map(([p,[x,y]])=>`<button class="pp ${cfSel(p)?'on':''}" style="left:${x}%;top:${y}%" data-a="cf" data-k="pos" data-v="${p}">${p}</button>`).join('')}</div>
   <div class="m sm" style="margin:8px 0 2px">${cfName()}</div><h3 class="mt">Tactical specialisation</h3>
   ${archPicker()}`)}  ${G('pad s4',`<h2>Scout & offers ${kk('age 12')}</h2><div class="tile"><b>${TIERS.map((t,i)=>String(CF.tier)===String(i)?t.n:'').join('')||'Random talent'}</b><br><span class="m sm">Your potential is hidden. Scouts only see what you show on the pitch.</span></div>
   <h3 class="mt">Pathway</h3><div class="tile sm">Ages 7–11 grassroots, then three academy offers at 12. Academy years up to 14 are summarised. From 15 every match is simulated.</div>
@@ -229,7 +229,7 @@ function vMyGame(r){
   <div class="note">Next: ${esc((nextFixObj()||{c:'season break'}).c)}</div>`):''}
   ${duel}`;
 }
-const ME_POSLABEL=()=>({GK:'Goalkeeper',CB:'Defender',FB:'Full-back',DM:'Midfield',CM:'Midfield',AM:'Playmaker',W:pname(ST.me),ST:'Striker'}[ST.me.pos]);
+const ME_POSLABEL=()=>({GK:'Goalkeeper',CB:'Defender',FB:pname(ST.me),DM:'Midfield',CM:'Midfield',AM:'Playmaker',W:pname(ST.me),ST:'Striker'}[ST.me.pos]);
 
 /* ---------- league & cups ---------- */
 function zc(lg,i,n){

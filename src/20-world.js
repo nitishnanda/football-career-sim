@@ -82,7 +82,7 @@ function addPlayer(g,c,pos,ovr,age,pa,real){
     if(nm.has(n))n+=' '+String.fromCharCode(65+g.int(0,25))+'.';
     nm.add(n)}
   const sh=[pkShiftOf(n),tkShiftOf(n),iqShiftOf(n)],p={id,n,nat,pos,age,pks:sh[0],tks:sh[1],iqs:sh[2],pa:Math.round((pa||ovr/fAge(age,pos,null,sh))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age,pos,null,sh))):ovr};   // pk: best rating reached (estimated for veterans at the start)
-  if(pos==='W')p.sd=(real&&real.sd)||pickSide(c,n);
+  if(SIDED[pos])p.sd=(real&&real.sd)||pickSide(c,n,pos);
   if(real&&real.fl)p.fl=1;
   if(!real)p.fk=1;   // made-up regen or signing: not a real player
   if(real&&real.gs!=null){p.gs=real.gs;p.asr=real.asr;p.pf=real.pf}
@@ -113,36 +113,46 @@ function fillSquad(g,c){
 
 /* Position corrections for the 2026 snapshot, whose generic "Midfielder"/"Attacker" labels file some wingers as central midfielders or strikers and some
    attacking midfielders as central ones. Only players whose real role is clear (applied to the snapshot, not the 2013-2025 squads, which are labelled correctly). */
-const POSFIX={'Vinícius Júnior':'W','Raphinha':'W','Bradley Barcola':'W','Igor Paixão':'W','Noni Madueke':'W','Kenan Yıldız':'W','Désiré Doué':'W','Jamie Leweling':'W','Iñaki Williams':'W','Giuliano Simeone':'W','Martin Ødegaard':'AM','Phil Foden':'AM','Álex Baena':'AM','Hakan Çalhanoğlu':'DM','Jurriën Timber':'CB','Maximilian Beier':'ST'};
+const POSFIX={'Vinícius Júnior':'W','Raphinha':'W','Bradley Barcola':'W','Igor Paixão':'W','Noni Madueke':'W','Kenan Yıldız':'W','Désiré Doué':'W','Jamie Leweling':'W','Iñaki Williams':'W','Giuliano Simeone':'W','Martin Ødegaard':'AM','Phil Foden':'AM','Álex Baena':'AM','Hakan Çalhanoğlu':'DM','Jurriën Timber':'FB','Maximilian Beier':'ST'};
 let _PF=null;
 const posFix=(n,pos)=>{if(!_PF){_PF={};for(const k in POSFIX)_PF[norm0(k)]=POSFIX[k]}return _PF[norm0(n||'')]||pos};
-/* Wingers have a side. The engine plays every winger as 'W'; sd ('L' or 'R') decides how he is named (LW / RW) and which flank he is drawn on.
-   Known wingers have their real side; the others are split so a squad's top two wingers are one of each. */
-const plab=p=>p.pos==='W'?(p.sd==='L'?'LW':p.sd==='R'?'RW':'W'):p.pos;
-const pname=p=>p.pos==='W'?(p.sd==='L'?'Left winger':p.sd==='R'?'Right winger':'Winger'):POSN[p.pos];
-const WSIDE_L="Vinícius Júnior,Rafael Leão,Khvicha Kvaratskhelia,Neymar,Son Heung-min,Luis Díaz,Alejandro Garnacho,Jérémy Doku,Raheem Sterling,Jack Grealish,Marcus Rashford,Anthony Gordon,Cody Gakpo,Nico Williams,Allan Saint-Maximin,Kingsley Coman,Ryan Giggs,Ronaldinho,Lorenzo Insigne,Callum Hudson-Odoi,Bradley Barcola,Kenan Yıldız,Igor Paixão,Mykhailo Mudryk,Jadon Sancho,Christos Tzolis,Eden Hazard,Franck Ribéry,Jack Harrison,Wilfried Zaha";
-const WSIDE_R="Mohamed Salah,Bukayo Saka,Lamine Yamal,Michael Olise,Bryan Mbeumo,Antoine Semenyo,Jarrod Bowen,Raphinha,Riyad Mahrez,Ángel Di María,Arjen Robben,Luís Figo,Theo Walcott,Daniel James,Adama Traoré,Rodrygo,Estêvão Willian,Noni Madueke,Christian Pulisic,Ismaïla Sarr,Pedro Neto,Mohammed Kudus,Antony,Amad Diallo,Savinho,Désiré Doué,Serge Gnabry,Leroy Sané,Gareth Bale,Ousmane Dembélé,Giuliano Simeone,Kevin Schade";
+const hasPosFix=n=>{posFix('');return _PF[norm0(n||'')]!==undefined};   // a corrected position is not re-shuffled by the squad-balance rule
+/* Wingers and full-backs have a side. The engine plays them all as 'W' / 'FB'; sd ('L' or 'R') decides how they are named (LW / RW, LB / RB) and
+   which flank they are drawn on. Known players have their real side; the others are split so a squad's top two wingers (and top two full-backs)
+   are one of each. */
+const SIDED={W:1,FB:1};
+const plab=p=>SIDED[p.pos]&&p.sd?(p.sd==='L'?'L':'R')+p.pos.slice(-1)+'':p.pos==='W'?'W':p.pos;
+const pname=p=>p.pos==='W'?(p.sd==='L'?'Left winger':p.sd==='R'?'Right winger':'Winger'):p.pos==='FB'?(p.sd==='L'?'Left-back':p.sd==='R'?'Right-back':'Full-back'):POSN[p.pos];
+const WSIDE_L="Vinícius Júnior,Rafael Leão,Khvicha Kvaratskhelia,Neymar,Son Heung-min,Luis Díaz,Alejandro Garnacho,Jérémy Doku,Raheem Sterling,Jack Grealish,Marcus Rashford,Anthony Gordon,Cody Gakpo,Nico Williams,Allan Saint-Maximin,Kingsley Coman,Ryan Giggs,Ronaldinho,Lorenzo Insigne,Callum Hudson-Odoi,Bradley Barcola,Kenan Yıldız,Igor Paixão,Mykhailo Mudryk,Jadon Sancho,Christos Tzolis,Eden Hazard,Franck Ribéry,Jack Harrison,Wilfried Zaha,"
+ +"Nuno Mendes,Alphonso Davies,Theo Hernández,Alejandro Grimaldo,Marc Cucurella,Federico Dimarco,Riccardo Calafiori,Andrew Robertson,Marcelo,Roberto Carlos,Paolo Maldini,Oleksandr Zinchenko,Alejandro Balde,Milos Kerkez,Lewis Hall,Antonee Robinson,Ben Chilwell,Luke Shaw,Ferland Mendy,Rayan Aït-Nouri,Nico O'Reilly,Álvaro Carreras,Adrien Truffert,Tyrick Mitchell,Vitaliy Mykolenko,Nathaniel Brown,Maximilian Mittelstädt,Jordi Alba";
+const WSIDE_R="Mohamed Salah,Bukayo Saka,Lamine Yamal,Michael Olise,Bryan Mbeumo,Antoine Semenyo,Jarrod Bowen,Raphinha,Riyad Mahrez,Ángel Di María,Arjen Robben,Luís Figo,Theo Walcott,Daniel James,Adama Traoré,Rodrygo,Estêvão Willian,Noni Madueke,Christian Pulisic,Ismaïla Sarr,Pedro Neto,Mohammed Kudus,Antony,Amad Diallo,Savinho,Désiré Doué,Serge Gnabry,Leroy Sané,Gareth Bale,Ousmane Dembélé,Giuliano Simeone,Kevin Schade,"
+ +"Achraf Hakimi,Trent Alexander-Arnold,Reece James,Pedro Porro,Jeremie Frimpong,Diogo Dalot,Kyle Walker,Dani Carvajal,Dani Alves,Philipp Lahm,João Cancelo,Jurriën Timber,Tino Livramento,Matheus Nunes,Joško Stanišić,Josip Stanišić,Jules Koundé,Malo Gusto,Matty Cash,Neco Williams,Ben White,Benjamin Pavard,Rico Lewis,Michael Kayode,Julian Ryerson,Pierre Kalulu,Andrea Cambiaso,Giovanni Di Lorenzo,Marcos Llorente,Jonathan Clauss";
 let _WS=null;
 function knownSide(n){if(!_WS){_WS={};for(const x of WSIDE_L.split(','))_WS[norm0(x)]='L';for(const x of WSIDE_R.split(','))_WS[norm0(x)]='R'}return _WS[norm0(n||'')]}
 const sideHash=n=>hashStr('side|'+n)%2?'L':'R';
-// a new winger joins the flank the club has fewer of
-function pickSide(c,n){const k=knownSide(n);if(k)return k;let l=0,r=0;for(const id of c.sq){const q=ST.W.pl[id];if(q&&q.pos==='W'){if(q.sd==='L')l++;else if(q.sd==='R')r++}}return l<r?'L':r<l?'R':sideHash(n)}
-// sides for one squad's wingers, listed best first: real sides stand, the rest fill the thinner flank in order
+// a new winger / full-back joins the flank the club has fewer of
+function pickSide(c,n,pos){const k=knownSide(n);if(k)return k;let l=0,r=0;for(const id of c.sq){const q=ST.W.pl[id];if(q&&q.pos===pos){if(q.sd==='L')l++;else if(q.sd==='R')r++}}return l<r?'L':r<l?'R':sideHash(n)}
+// sides for one squad's players of a position, listed best first: real sides stand, the rest fill the thinner flank in order
 function assignSides(arr){
   const m=new Map();let l=0,r=0;
-  for(const x of arr){const k=knownSide(x.n);if(k){m.set(x,k);if(k==='L')l++;else r++}}
-  for(const x of arr){if(m.has(x))continue;const s=l<r?'L':r<l?'R':sideHash(x.n);m.set(x,s);if(s==='L')l++;else r++}
+  for(const x of arr){const k=x.conv?null:knownSide(x.n);if(k){m.set(x,k);if(k==='L')l++;else r++}}
+  arr.forEach((x,i)=>{
+    if(m.has(x))return;
+    // a starter takes the opposite flank to the other starter if that one is settled; otherwise the thinner flank
+    const o=i<2?m.get(arr[1-i]):null,s=o?(o==='L'?'R':'L'):l<r?'L':r<l?'R':sideHash(x.n);
+    m.set(x,s);if(s==='L')l++;else r++;
+  });
   return m;
 }
 // real squad -> ratings. Order within a position by caps, squad number and age; ratings hang off club strength.
 function addReal(g,c,list){
-  const L=list.map(([t,d,pos,by,nat,caps,no,v,m,pid,gs,asr,pf,evm])=>({gs,asr,pf,evm:evm||0,n:t.replace(/\s*\(.*\)$/,''),pos:pid!==0?posFix(t.replace(/\s*\(.*\)$/,''),pos):pos,age:clamp(ST.season-by,16,42),nat:nat==='United States'?'USA':(nat||LGN[c.lg].nat),caps,v:v||0,m:m||0,q:caps+(v||0)*2+(m||0)/20+(no>0&&no<=11?12:no>0&&no<=25?6:0)}));
+  const L=list.map(([t,d,pos,by,nat,caps,no,v,m,pid,gs,asr,pf,evm])=>({gs,asr,pf,evm:evm||0,fx:pid!==0&&hasPosFix(t.replace(/\s*\(.*\)$/,'')),n:t.replace(/\s*\(.*\)$/,''),pos:pid!==0?posFix(t.replace(/\s*\(.*\)$/,''),pos):pos,age:clamp(ST.season-by,16,42),nat:nat==='United States'?'USA':(nat||LGN[c.lg].nat),caps,v:v||0,m:m||0,q:caps+(v||0)*2+(m||0)/20+(no>0&&no<=11?12:no>0&&no<=25?6:0)}));
   L.forEach(x=>{if(x.age>=24&&x.age<=31)x.q+=4});
   const cov=L.filter(x=>x.v>0).length/L.length;
   const cnt=p=>L.filter(x=>x.pos===p).length;
-  for(const pos in NSL)while(cnt(pos)<NSL[pos]){const dn=DON[pos].find(d=>cnt(d)>NSL[d]);if(!dn)break;L.filter(x=>x.pos===dn).sort((a,b)=>a.q-b.q)[0].pos=pos}
+  for(const pos in NSL)while(cnt(pos)<NSL[pos]){const dn=DON[pos].find(d=>cnt(d)>NSL[d]&&L.some(x=>x.pos===d&&!x.fx));if(!dn)break;const cv=L.filter(x=>x.pos===dn&&!x.fx).sort((a,b)=>a.q-b.q)[0];cv.pos=pos;cv.conv=1}   // a converted player takes whichever flank the squad lacks
   for(const pos in NSL){
-    const arr=L.filter(x=>x.pos===pos).sort((a,b)=>b.q-a.q),k=NSL[pos],sdm=pos==='W'?assignSides(arr):null;
+    const arr=L.filter(x=>x.pos===pos).sort((a,b)=>b.q-a.q),k=NSL[pos],made=[];
     arr.forEach((x,r)=>{
       const bump=x.caps>=80?5:x.caps>=50?3.5:x.caps>=25?2:x.caps>=10?1:0;
       let ovr=r<k?c.base+g.norm(0,3.2)+bump:c.base-4-2*Math.min(r-k,4)+g.norm(0,3)+bump*.5;
@@ -156,8 +166,10 @@ function addReal(g,c,list){
       // potential: young players only keep the nominal growth if their real performances back it up
       let pa,gm;
       if(x.age<24){const rel=x.evm/(x.evm+600);gm=clamp(.8+.3*(x.pf||0)*rel-(x.evm<300?.1:0),.3,1.2);pa=Math.min(96,ovr/fAge(x.age,pos,null,[pkShiftOf(x.n),tkShiftOf(x.n),iqShiftOf(x.n)]))}
-      addPlayer(g,c,pos,ovr,x.age,pa,{n:x.n,nat:x.nat,gs:x.gs,asr:x.asr,pf:x.pf,gm,sd:sdm&&sdm.get(x)});
+      made.push({p:addPlayer(g,c,pos,ovr,x.age,pa,{n:x.n,nat:x.nat,gs:x.gs,asr:x.asr,pf:x.pf,gm}),n:x.n,conv:x.conv});
     });
+    // sides are settled once ratings are known, so the two players who start are one on each flank where possible
+    if(SIDED[pos]){const it=made.sort((a,b)=>b.p.ovr-a.p.ovr),m=assignSides(it);for(const o of it)o.p.sd=m.get(o)}
     for(let r=arr.length;r<k;r++){c.fln=(c.fln||0)+1;addPlayer(g,c,pos,Math.round(c.base-6),26,undefined,{n:c.name+' reserve '+c.fln,nat:LGN[c.lg].nat,fl:1})}
   }
 }

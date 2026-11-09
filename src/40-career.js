@@ -51,7 +51,7 @@ function newCareer(o){
   const t=o.tier==='random'||o.tier==null?TIERS[g.wpick([0,1,2,3],i=>[.45,.35,.17,.03][i])]:TIERS[+o.tier];
   const pa=clamp(g.norm(t.m,t.s),66,98);
   let arch=o.arch,hid=0;if(!arch||arch==='random'||!ARX[o.pos][arch]){arch=g.pick(Object.keys(ARX[o.pos]));hid=o.arch==='random'?1:0}
-  const me={name:o.name||'Player',nat:o.nat||'England',pos:o.pos,sd:o.pos==='W'?(o.side||(o.foot==='Left'?'L':'R')):undefined,arch,archHidden:hid,foot:o.foot||'Right',ht:o.ht||180,pa:Math.round(pa*10)/10,tier:t.n,age:7,gap:0,dev:{},sdev:{},base:0,cl:-1,parent:-1,role:'youth',form:[],inj:0,sus:0,rows:[],hon:[],aw:[],moves:[],focus:null,ss:null,trust:60,caps:0,ig:0,nr:null,tx:{},a0:null,tn:0,wf:o.foot==='Both'?5:3,frame:o.frame||'Athletic'};
+  const me={name:o.name||'Player',nat:o.nat||'England',pos:o.pos,sd:o.pos==='W'||o.pos==='FB'?(o.side||(o.foot==='Left'?'L':'R')):undefined,arch,archHidden:hid,foot:o.foot||'Right',ht:o.ht||180,pa:Math.round(pa*10)/10,tier:t.n,age:7,gap:0,dev:{},sdev:{},base:0,cl:-1,parent:-1,role:'youth',form:[],inj:0,sus:0,rows:[],hon:[],aw:[],moves:[],focus:null,ss:null,trust:60,caps:0,ig:0,nr:null,tx:{},a0:null,tn:0,wf:o.foot==='Both'?5:3,frame:o.frame||'Athletic'};
   me.brk=rollBrk(g,o.pos,t.n);
   // personal peak shifts in years for the physical, technical and IQ components (see COMPS): negative peaks early, positive late
   me.pks=clamp(Math.round(R(seed+'|pks').norm(0,2.2)*10)/10,-5,5);me.tks=clamp(Math.round(R(seed+'|tks').norm(0,2.2)*10)/10,-5,5);me.iqs=clamp(Math.round(R(seed+'|iqs').norm(0,3.2)*10)/10,-7,7);

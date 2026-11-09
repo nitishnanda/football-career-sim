@@ -35,7 +35,8 @@ function spark(v,w,h){
   return`<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><line x1="0" x2="${w}" y1="${y(RAVG).toFixed(1)}" y2="${y(RAVG).toFixed(1)}" stroke="currentColor" stroke-opacity=".2" stroke-dasharray="3 3"/><polyline fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" points="${v.map((r,i)=>x(i).toFixed(1)+','+y(r).toFixed(1)).join(' ')}"/>${v.map((r,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(r).toFixed(1)}" r="2.3" fill="currentColor"/>`).join('')}</svg>`;
 }
 function pitchXI(xi){
-  if(xi[8]&&xi[9]&&xi[8].pos==='W'&&xi[9].pos==='W'){const sd=x=>x.me?ST.me.sd:x.p.sd;if(sd(xi[8])==='R'&&sd(xi[9])==='L'){xi=xi.slice();[xi[8],xi[9]]=[xi[9],xi[8]]}}   // left winger on the left flank
+  const sd=x=>x.me?ST.me.sd:x.p.sd;   // the left-sided winger / full-back takes the left flank
+  for(const[a,b,pos]of[[3,4,'FB'],[8,9,'W']])if(xi[a]&&xi[b]&&xi[a].pos===pos&&xi[b].pos===pos&&sd(xi[a])==='R'&&sd(xi[b])==='L'){xi=xi.slice();[xi[a],xi[b]]=[xi[b],xi[a]]}
   return`<div class="xi">${xi.map((x,i)=>x?`<div class="pl${x.me?' me':''}" style="left:${SLOTXY[i][0]}%;top:${SLOTXY[i][1]}%"><b>${x.p.ovr}</b><span>${x.me?esc(ST.me.name.split(' ').pop()):plink(x.p,x.p.n.split(' ').pop())}</span><em class="pp-l">${x.me?plab(ST.me):plab(x.p)}</em></div>`:'').join('')}</div>`;
 }
 

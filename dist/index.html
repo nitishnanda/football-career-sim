@@ -327,7 +327,7 @@ function R(key){
 
 const norm0=s=>String(s).normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase();   // accent- and case-insensitive key for names
 
-const VER=18;
+const VER=19;
 const NTOP=5,CO=['England','Spain','Germany','Italy','France'];
 const CUPN={England:'FA Cup',Spain:'Copa del Rey',Germany:'DFB-Pokal',Italy:'Coppa Italia',France:'Coupe de France'};
 // REAL (data/world.json, built from Wikipedia) is injected by the build: divisions, clubs, managers, grounds, players
@@ -1492,7 +1492,7 @@ function addPlayer(g,c,pos,ovr,age,pa,real){
     if(nm.has(n))n+=' '+String.fromCharCode(65+g.int(0,25))+'.';
     nm.add(n)}
   const sh=[pkShiftOf(n),tkShiftOf(n),iqShiftOf(n)],p={id,n,nat,pos,age,pks:sh[0],tks:sh[1],iqs:sh[2],pa:Math.round((pa||ovr/fAge(age,pos,null,sh))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age,pos,null,sh))):ovr};   // pk: best rating reached (estimated for veterans at the start)
-  if(pos==='W')p.sd=(real&&real.sd)||pickSide(c,n);
+  if(SIDED[pos])p.sd=(real&&real.sd)||pickSide(c,n,pos);
   if(real&&real.fl)p.fl=1;
   if(!real)p.fk=1;   // made-up regen or signing: not a real player
   if(real&&real.gs!=null){p.gs=real.gs;p.asr=real.asr;p.pf=real.pf}
@@ -1523,36 +1523,46 @@ function fillSquad(g,c){
 
 /* Position corrections for the 2026 snapshot, whose generic "Midfielder"/"Attacker" labels file some wingers as central midfielders or strikers and some
    attacking midfielders as central ones. Only players whose real role is clear (applied to the snapshot, not the 2013-2025 squads, which are labelled correctly). */
-const POSFIX={'Vinícius Júnior':'W','Raphinha':'W','Bradley Barcola':'W','Igor Paixão':'W','Noni Madueke':'W','Kenan Yıldız':'W','Désiré Doué':'W','Jamie Leweling':'W','Iñaki Williams':'W','Giuliano Simeone':'W','Martin Ødegaard':'AM','Phil Foden':'AM','Álex Baena':'AM','Hakan Çalhanoğlu':'DM','Jurriën Timber':'CB','Maximilian Beier':'ST'};
+const POSFIX={'Vinícius Júnior':'W','Raphinha':'W','Bradley Barcola':'W','Igor Paixão':'W','Noni Madueke':'W','Kenan Yıldız':'W','Désiré Doué':'W','Jamie Leweling':'W','Iñaki Williams':'W','Giuliano Simeone':'W','Martin Ødegaard':'AM','Phil Foden':'AM','Álex Baena':'AM','Hakan Çalhanoğlu':'DM','Jurriën Timber':'FB','Maximilian Beier':'ST'};
 let _PF=null;
 const posFix=(n,pos)=>{if(!_PF){_PF={};for(const k in POSFIX)_PF[norm0(k)]=POSFIX[k]}return _PF[norm0(n||'')]||pos};
-/* Wingers have a side. The engine plays every winger as 'W'; sd ('L' or 'R') decides how he is named (LW / RW) and which flank he is drawn on.
-   Known wingers have their real side; the others are split so a squad's top two wingers are one of each. */
-const plab=p=>p.pos==='W'?(p.sd==='L'?'LW':p.sd==='R'?'RW':'W'):p.pos;
-const pname=p=>p.pos==='W'?(p.sd==='L'?'Left winger':p.sd==='R'?'Right winger':'Winger'):POSN[p.pos];
-const WSIDE_L="Vinícius Júnior,Rafael Leão,Khvicha Kvaratskhelia,Neymar,Son Heung-min,Luis Díaz,Alejandro Garnacho,Jérémy Doku,Raheem Sterling,Jack Grealish,Marcus Rashford,Anthony Gordon,Cody Gakpo,Nico Williams,Allan Saint-Maximin,Kingsley Coman,Ryan Giggs,Ronaldinho,Lorenzo Insigne,Callum Hudson-Odoi,Bradley Barcola,Kenan Yıldız,Igor Paixão,Mykhailo Mudryk,Jadon Sancho,Christos Tzolis,Eden Hazard,Franck Ribéry,Jack Harrison,Wilfried Zaha";
-const WSIDE_R="Mohamed Salah,Bukayo Saka,Lamine Yamal,Michael Olise,Bryan Mbeumo,Antoine Semenyo,Jarrod Bowen,Raphinha,Riyad Mahrez,Ángel Di María,Arjen Robben,Luís Figo,Theo Walcott,Daniel James,Adama Traoré,Rodrygo,Estêvão Willian,Noni Madueke,Christian Pulisic,Ismaïla Sarr,Pedro Neto,Mohammed Kudus,Antony,Amad Diallo,Savinho,Désiré Doué,Serge Gnabry,Leroy Sané,Gareth Bale,Ousmane Dembélé,Giuliano Simeone,Kevin Schade";
+const hasPosFix=n=>{posFix('');return _PF[norm0(n||'')]!==undefined};   // a corrected position is not re-shuffled by the squad-balance rule
+/* Wingers and full-backs have a side. The engine plays them all as 'W' / 'FB'; sd ('L' or 'R') decides how they are named (LW / RW, LB / RB) and
+   which flank they are drawn on. Known players have their real side; the others are split so a squad's top two wingers (and top two full-backs)
+   are one of each. */
+const SIDED={W:1,FB:1};
+const plab=p=>SIDED[p.pos]&&p.sd?(p.sd==='L'?'L':'R')+p.pos.slice(-1)+'':p.pos==='W'?'W':p.pos;
+const pname=p=>p.pos==='W'?(p.sd==='L'?'Left winger':p.sd==='R'?'Right winger':'Winger'):p.pos==='FB'?(p.sd==='L'?'Left-back':p.sd==='R'?'Right-back':'Full-back'):POSN[p.pos];
+const WSIDE_L="Vinícius Júnior,Rafael Leão,Khvicha Kvaratskhelia,Neymar,Son Heung-min,Luis Díaz,Alejandro Garnacho,Jérémy Doku,Raheem Sterling,Jack Grealish,Marcus Rashford,Anthony Gordon,Cody Gakpo,Nico Williams,Allan Saint-Maximin,Kingsley Coman,Ryan Giggs,Ronaldinho,Lorenzo Insigne,Callum Hudson-Odoi,Bradley Barcola,Kenan Yıldız,Igor Paixão,Mykhailo Mudryk,Jadon Sancho,Christos Tzolis,Eden Hazard,Franck Ribéry,Jack Harrison,Wilfried Zaha,"
+ +"Nuno Mendes,Alphonso Davies,Theo Hernández,Alejandro Grimaldo,Marc Cucurella,Federico Dimarco,Riccardo Calafiori,Andrew Robertson,Marcelo,Roberto Carlos,Paolo Maldini,Oleksandr Zinchenko,Alejandro Balde,Milos Kerkez,Lewis Hall,Antonee Robinson,Ben Chilwell,Luke Shaw,Ferland Mendy,Rayan Aït-Nouri,Nico O'Reilly,Álvaro Carreras,Adrien Truffert,Tyrick Mitchell,Vitaliy Mykolenko,Nathaniel Brown,Maximilian Mittelstädt,Jordi Alba";
+const WSIDE_R="Mohamed Salah,Bukayo Saka,Lamine Yamal,Michael Olise,Bryan Mbeumo,Antoine Semenyo,Jarrod Bowen,Raphinha,Riyad Mahrez,Ángel Di María,Arjen Robben,Luís Figo,Theo Walcott,Daniel James,Adama Traoré,Rodrygo,Estêvão Willian,Noni Madueke,Christian Pulisic,Ismaïla Sarr,Pedro Neto,Mohammed Kudus,Antony,Amad Diallo,Savinho,Désiré Doué,Serge Gnabry,Leroy Sané,Gareth Bale,Ousmane Dembélé,Giuliano Simeone,Kevin Schade,"
+ +"Achraf Hakimi,Trent Alexander-Arnold,Reece James,Pedro Porro,Jeremie Frimpong,Diogo Dalot,Kyle Walker,Dani Carvajal,Dani Alves,Philipp Lahm,João Cancelo,Jurriën Timber,Tino Livramento,Matheus Nunes,Joško Stanišić,Josip Stanišić,Jules Koundé,Malo Gusto,Matty Cash,Neco Williams,Ben White,Benjamin Pavard,Rico Lewis,Michael Kayode,Julian Ryerson,Pierre Kalulu,Andrea Cambiaso,Giovanni Di Lorenzo,Marcos Llorente,Jonathan Clauss";
 let _WS=null;
 function knownSide(n){if(!_WS){_WS={};for(const x of WSIDE_L.split(','))_WS[norm0(x)]='L';for(const x of WSIDE_R.split(','))_WS[norm0(x)]='R'}return _WS[norm0(n||'')]}
 const sideHash=n=>hashStr('side|'+n)%2?'L':'R';
-// a new winger joins the flank the club has fewer of
-function pickSide(c,n){const k=knownSide(n);if(k)return k;let l=0,r=0;for(const id of c.sq){const q=ST.W.pl[id];if(q&&q.pos==='W'){if(q.sd==='L')l++;else if(q.sd==='R')r++}}return l<r?'L':r<l?'R':sideHash(n)}
-// sides for one squad's wingers, listed best first: real sides stand, the rest fill the thinner flank in order
+// a new winger / full-back joins the flank the club has fewer of
+function pickSide(c,n,pos){const k=knownSide(n);if(k)return k;let l=0,r=0;for(const id of c.sq){const q=ST.W.pl[id];if(q&&q.pos===pos){if(q.sd==='L')l++;else if(q.sd==='R')r++}}return l<r?'L':r<l?'R':sideHash(n)}
+// sides for one squad's players of a position, listed best first: real sides stand, the rest fill the thinner flank in order
 function assignSides(arr){
   const m=new Map();let l=0,r=0;
-  for(const x of arr){const k=knownSide(x.n);if(k){m.set(x,k);if(k==='L')l++;else r++}}
-  for(const x of arr){if(m.has(x))continue;const s=l<r?'L':r<l?'R':sideHash(x.n);m.set(x,s);if(s==='L')l++;else r++}
+  for(const x of arr){const k=x.conv?null:knownSide(x.n);if(k){m.set(x,k);if(k==='L')l++;else r++}}
+  arr.forEach((x,i)=>{
+    if(m.has(x))return;
+    // a starter takes the opposite flank to the other starter if that one is settled; otherwise the thinner flank
+    const o=i<2?m.get(arr[1-i]):null,s=o?(o==='L'?'R':'L'):l<r?'L':r<l?'R':sideHash(x.n);
+    m.set(x,s);if(s==='L')l++;else r++;
+  });
   return m;
 }
 // real squad -> ratings. Order within a position by caps, squad number and age; ratings hang off club strength.
 function addReal(g,c,list){
-  const L=list.map(([t,d,pos,by,nat,caps,no,v,m,pid,gs,asr,pf,evm])=>({gs,asr,pf,evm:evm||0,n:t.replace(/\s*\(.*\)$/,''),pos:pid!==0?posFix(t.replace(/\s*\(.*\)$/,''),pos):pos,age:clamp(ST.season-by,16,42),nat:nat==='United States'?'USA':(nat||LGN[c.lg].nat),caps,v:v||0,m:m||0,q:caps+(v||0)*2+(m||0)/20+(no>0&&no<=11?12:no>0&&no<=25?6:0)}));
+  const L=list.map(([t,d,pos,by,nat,caps,no,v,m,pid,gs,asr,pf,evm])=>({gs,asr,pf,evm:evm||0,fx:pid!==0&&hasPosFix(t.replace(/\s*\(.*\)$/,'')),n:t.replace(/\s*\(.*\)$/,''),pos:pid!==0?posFix(t.replace(/\s*\(.*\)$/,''),pos):pos,age:clamp(ST.season-by,16,42),nat:nat==='United States'?'USA':(nat||LGN[c.lg].nat),caps,v:v||0,m:m||0,q:caps+(v||0)*2+(m||0)/20+(no>0&&no<=11?12:no>0&&no<=25?6:0)}));
   L.forEach(x=>{if(x.age>=24&&x.age<=31)x.q+=4});
   const cov=L.filter(x=>x.v>0).length/L.length;
   const cnt=p=>L.filter(x=>x.pos===p).length;
-  for(const pos in NSL)while(cnt(pos)<NSL[pos]){const dn=DON[pos].find(d=>cnt(d)>NSL[d]);if(!dn)break;L.filter(x=>x.pos===dn).sort((a,b)=>a.q-b.q)[0].pos=pos}
+  for(const pos in NSL)while(cnt(pos)<NSL[pos]){const dn=DON[pos].find(d=>cnt(d)>NSL[d]&&L.some(x=>x.pos===d&&!x.fx));if(!dn)break;const cv=L.filter(x=>x.pos===dn&&!x.fx).sort((a,b)=>a.q-b.q)[0];cv.pos=pos;cv.conv=1}   // a converted player takes whichever flank the squad lacks
   for(const pos in NSL){
-    const arr=L.filter(x=>x.pos===pos).sort((a,b)=>b.q-a.q),k=NSL[pos],sdm=pos==='W'?assignSides(arr):null;
+    const arr=L.filter(x=>x.pos===pos).sort((a,b)=>b.q-a.q),k=NSL[pos],made=[];
     arr.forEach((x,r)=>{
       const bump=x.caps>=80?5:x.caps>=50?3.5:x.caps>=25?2:x.caps>=10?1:0;
       let ovr=r<k?c.base+g.norm(0,3.2)+bump:c.base-4-2*Math.min(r-k,4)+g.norm(0,3)+bump*.5;
@@ -1566,8 +1576,10 @@ function addReal(g,c,list){
       // potential: young players only keep the nominal growth if their real performances back it up
       let pa,gm;
       if(x.age<24){const rel=x.evm/(x.evm+600);gm=clamp(.8+.3*(x.pf||0)*rel-(x.evm<300?.1:0),.3,1.2);pa=Math.min(96,ovr/fAge(x.age,pos,null,[pkShiftOf(x.n),tkShiftOf(x.n),iqShiftOf(x.n)]))}
-      addPlayer(g,c,pos,ovr,x.age,pa,{n:x.n,nat:x.nat,gs:x.gs,asr:x.asr,pf:x.pf,gm,sd:sdm&&sdm.get(x)});
+      made.push({p:addPlayer(g,c,pos,ovr,x.age,pa,{n:x.n,nat:x.nat,gs:x.gs,asr:x.asr,pf:x.pf,gm}),n:x.n,conv:x.conv});
     });
+    // sides are settled once ratings are known, so the two players who start are one on each flank where possible
+    if(SIDED[pos]){const it=made.sort((a,b)=>b.p.ovr-a.p.ovr),m=assignSides(it);for(const o of it)o.p.sd=m.get(o)}
     for(let r=arr.length;r<k;r++){c.fln=(c.fln||0)+1;addPlayer(g,c,pos,Math.round(c.base-6),26,undefined,{n:c.name+' reserve '+c.fln,nat:LGN[c.lg].nat,fl:1})}
   }
 }
@@ -2155,7 +2167,7 @@ function newCareer(o){
   const t=o.tier==='random'||o.tier==null?TIERS[g.wpick([0,1,2,3],i=>[.45,.35,.17,.03][i])]:TIERS[+o.tier];
   const pa=clamp(g.norm(t.m,t.s),66,98);
   let arch=o.arch,hid=0;if(!arch||arch==='random'||!ARX[o.pos][arch]){arch=g.pick(Object.keys(ARX[o.pos]));hid=o.arch==='random'?1:0}
-  const me={name:o.name||'Player',nat:o.nat||'England',pos:o.pos,sd:o.pos==='W'?(o.side||(o.foot==='Left'?'L':'R')):undefined,arch,archHidden:hid,foot:o.foot||'Right',ht:o.ht||180,pa:Math.round(pa*10)/10,tier:t.n,age:7,gap:0,dev:{},sdev:{},base:0,cl:-1,parent:-1,role:'youth',form:[],inj:0,sus:0,rows:[],hon:[],aw:[],moves:[],focus:null,ss:null,trust:60,caps:0,ig:0,nr:null,tx:{},a0:null,tn:0,wf:o.foot==='Both'?5:3,frame:o.frame||'Athletic'};
+  const me={name:o.name||'Player',nat:o.nat||'England',pos:o.pos,sd:o.pos==='W'||o.pos==='FB'?(o.side||(o.foot==='Left'?'L':'R')):undefined,arch,archHidden:hid,foot:o.foot||'Right',ht:o.ht||180,pa:Math.round(pa*10)/10,tier:t.n,age:7,gap:0,dev:{},sdev:{},base:0,cl:-1,parent:-1,role:'youth',form:[],inj:0,sus:0,rows:[],hon:[],aw:[],moves:[],focus:null,ss:null,trust:60,caps:0,ig:0,nr:null,tx:{},a0:null,tn:0,wf:o.foot==='Both'?5:3,frame:o.frame||'Athletic'};
   me.brk=rollBrk(g,o.pos,t.n);
   // personal peak shifts in years for the physical, technical and IQ components (see COMPS): negative peaks early, positive late
   me.pks=clamp(Math.round(R(seed+'|pks').norm(0,2.2)*10)/10,-5,5);me.tks=clamp(Math.round(R(seed+'|tks').norm(0,2.2)*10)/10,-5,5);me.iqs=clamp(Math.round(R(seed+'|iqs').norm(0,3.2)*10)/10,-7,7);
@@ -3192,7 +3204,7 @@ function reinventCheck(){
 function reinvent(i){
   const rn=ST.pend&&ST.pend.rein,me=ST.me;if(!rn||!rn.opts[i])return;
   const o=rn.opts[i],A=Object.assign({},me.attr),oldSub=me.sub?Object.assign({},me.sub):null,fromPos=me.pos,fromArch=me.arch;
-  me.pos=o.pos;me.arch=o.arch;me.archHidden=0;if(me.pos==='W'&&!me.sd)me.sd=me.foot==='Left'?'L':'R';me.focus=null;me.dev={};me.sdev={};
+  me.pos=o.pos;me.arch=o.arch;me.archHidden=0;if(SIDED[me.pos]&&!me.sd)me.sd=me.foot==='Left'?'L':'R';me.focus=null;me.dev={};me.sdev={};
   const keys=me.pos==='GK'?GKK:OUTK,w=OVW[me.pos],P=PROF[me.pos],ar=archOf(me).att||{};
   let sw=0,so=0;keys.forEach((k,j)=>{sw+=w[j];so+=w[j]*(A[k]||0)});
   const nov=so/sw,pen=o.pen,F=fOf(me,me.age);
@@ -3434,9 +3446,9 @@ const TROPHY_ASSETS={ucl:{c:TrophyUCL,h:128},wc:{c:TrophyWorldCup,h:132},euro:{c
 
 let TAB='home',LGV=0,UIM=null,COMPACT=false,BRK=false,INB={f:'all',sel:null,log:0};
 const CF={name:'',nat:'England',pos:'ST',side:'R',arch:'Poacher',foot:'Right',ht:182,frame:'Athletic',tier:'random',seed:'',era:2026};
-const PPOS={GK:[6,50],CB:[21,50],FB:[27,12],DM:[38,50],CM:[52,34],AM:[64,66],LW:[76,12],RW:[76,88],ST:[91,50]};
+const PPOS={GK:[6,50],CB:[21,50],LB:[27,12],RB:[27,88],DM:[38,50],CM:[52,34],AM:[64,66],LW:[76,12],RW:[76,88],ST:[91,50]};
 // the create screen picks LW or RW; the engine position stays W and the side is kept separately
-const cfSel=p=>p==='LW'?CF.pos==='W'&&CF.side!=='R':p==='RW'?CF.pos==='W'&&CF.side==='R':CF.pos===p;
+const cfSel=p=>p==='LW'||p==='RW'?CF.pos==='W'&&(CF.side==='R')===(p==='RW'):p==='LB'||p==='RB'?CF.pos==='FB'&&(CF.side==='R')===(p==='RB'):CF.pos===p;
 const cfName=()=>pname({pos:CF.pos,sd:CF.side});
 const FRAMES=['Lean Wire','Athletic','Power Solid'],WMUL={'Lean Wire':.78,Athletic:.88,'Power Solid':.98};
 const DIR={pac:'Sprint mechanics & acceleration',sho:'Finishing patterns & shot technique',pas:'Ball progression & key passes',dri:'Close control & 1v1 take-ons',def:'Positioning & tackling timing',phy:'Strength & endurance block',div:'Diving range & recovery',han:'Handling & claiming crosses',kic:'Distribution & kicking',ref:'Reflex & reaction work',pos:'Positioning & sweeping'};
@@ -3499,7 +3511,7 @@ function vCreate(){
   <label>${kk('Frame archetype')}<div class="row">${FRAMES.map(f=>`<button class="btn alt g1 sm ${CF.frame===f?'on':''}" data-a="cf" data-k="frame" data-v="${f}">${f}</button>`).join('')}</div></label>
   <label>${kk('Seed (optional)')}<input data-f="seed" value="${esc(CF.seed)}" placeholder="same seed, same league"></label></div>
   <div class="tile mt"><b>Homegrown status</b><br><span class="m sm">Seasons at an academy before 21 count towards squad homegrown quotas.</span></div>`)}
-  ${G('pad s4',`<h2>Tactical matrix ${kk('selected: '+(CF.pos==='W'?(CF.side==='R'?'RW':'LW'):CF.pos))}</h2><div class="pitch">${Object.entries(PPOS).map(([p,[x,y]])=>`<button class="pp ${cfSel(p)?'on':''}" style="left:${x}%;top:${y}%" data-a="cf" data-k="pos" data-v="${p}">${p}</button>`).join('')}</div>
+  ${G('pad s4',`<h2>Tactical matrix ${kk('selected: '+plab({pos:CF.pos,sd:CF.side}))}</h2><div class="pitch">${Object.entries(PPOS).map(([p,[x,y]])=>`<button class="pp ${cfSel(p)?'on':''}" style="left:${x}%;top:${y}%" data-a="cf" data-k="pos" data-v="${p}">${p}</button>`).join('')}</div>
   <div class="m sm" style="margin:8px 0 2px">${cfName()}</div><h3 class="mt">Tactical specialisation</h3>
   ${archPicker()}`)}  ${G('pad s4',`<h2>Scout & offers ${kk('age 12')}</h2><div class="tile"><b>${TIERS.map((t,i)=>String(CF.tier)===String(i)?t.n:'').join('')||'Random talent'}</b><br><span class="m sm">Your potential is hidden. Scouts only see what you show on the pitch.</span></div>
   <h3 class="mt">Pathway</h3><div class="tile sm">Ages 7–11 grassroots, then three academy offers at 12. Academy years up to 14 are summarised. From 15 every match is simulated.</div>
@@ -3663,7 +3675,7 @@ function vMyGame(r){
   <div class="note">Next: ${esc((nextFixObj()||{c:'season break'}).c)}</div>`):''}
   ${duel}`;
 }
-const ME_POSLABEL=()=>({GK:'Goalkeeper',CB:'Defender',FB:'Full-back',DM:'Midfield',CM:'Midfield',AM:'Playmaker',W:pname(ST.me),ST:'Striker'}[ST.me.pos]);
+const ME_POSLABEL=()=>({GK:'Goalkeeper',CB:'Defender',FB:pname(ST.me),DM:'Midfield',CM:'Midfield',AM:'Playmaker',W:pname(ST.me),ST:'Striker'}[ST.me.pos]);
 
 /* ---------- league & cups ---------- */
 function zc(lg,i,n){
@@ -4080,7 +4092,8 @@ function spark(v,w,h){
   return`<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><line x1="0" x2="${w}" y1="${y(RAVG).toFixed(1)}" y2="${y(RAVG).toFixed(1)}" stroke="currentColor" stroke-opacity=".2" stroke-dasharray="3 3"/><polyline fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" points="${v.map((r,i)=>x(i).toFixed(1)+','+y(r).toFixed(1)).join(' ')}"/>${v.map((r,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(r).toFixed(1)}" r="2.3" fill="currentColor"/>`).join('')}</svg>`;
 }
 function pitchXI(xi){
-  if(xi[8]&&xi[9]&&xi[8].pos==='W'&&xi[9].pos==='W'){const sd=x=>x.me?ST.me.sd:x.p.sd;if(sd(xi[8])==='R'&&sd(xi[9])==='L'){xi=xi.slice();[xi[8],xi[9]]=[xi[9],xi[8]]}}   // left winger on the left flank
+  const sd=x=>x.me?ST.me.sd:x.p.sd;   // the left-sided winger / full-back takes the left flank
+  for(const[a,b,pos]of[[3,4,'FB'],[8,9,'W']])if(xi[a]&&xi[b]&&xi[a].pos===pos&&xi[b].pos===pos&&sd(xi[a])==='R'&&sd(xi[b])==='L'){xi=xi.slice();[xi[a],xi[b]]=[xi[b],xi[a]]}
   return`<div class="xi">${xi.map((x,i)=>x?`<div class="pl${x.me?' me':''}" style="left:${SLOTXY[i][0]}%;top:${SLOTXY[i][1]}%"><b>${x.p.ovr}</b><span>${x.me?esc(ST.me.name.split(' ').pop()):plink(x.p,x.p.n.split(' ').pop())}</span><em class="pp-l">${x.me?plab(ST.me):plab(x.p)}</em></div>`:'').join('')}</div>`;
 }
 
@@ -4261,7 +4274,7 @@ function vMatchCenter(){
     body=G('pad s7',`<h2>Match flow</h2>${vTimeline(r)}<div class="chips">${chips.join('')||'<span class="m">No goals</span>'}</div>`)
       +G('pad s5',`<h2>Your rating</h2><div class="row" style="gap:18px">${s?rb(s.rating,1):'<span class="m">no rating</span>'}<div class="g1">${r.motm?`<div class="m sm">Best rated: <b>${esc(r.motm.n)}</b> ${rb(r.motm.r)}</div>`:''}</div></div>${vb?`<div class="note"><b>${r.k==='nat'?'National coach':'Manager'}'s verdict · ${esc(r.k==='nat'?natMgr(me.nat):mgr(club(me.parent>=0&&me.role==='youth'?me.parent:me.cl)))}</b><br>“${g.pick(vb)}”</div>`:''}${s&&s.f?`<h3 class="mt">What drove your rating</h3>${rateParts(me.pos,s.f).map(([l,d,v])=>`<div class="kv"><span>${esc(l)}${typeof v==='number'&&l!=='Win'&&l!=='Defeat'&&l!=='Clean sheet'?' · '+v:''}</span><b style="color:${d>0?'var(--good)':'var(--badc)'}">${d>0?'+':''}${d.toFixed(2)}</b></div>`).join('')}<div class="m sm mt">Compared with an average game at your position. Ratings come from a model fitted on 91,000 real player-matches.</div>`:''}${r.inj?`<div class="warn">Injury: ${esc(r.inj.t)}, about ${r.inj.w} week${r.inj.w>1?'s':''}.</div>`:''}${r.red?'<div class="warn">Sent off. You miss the next match.</div>':''}`);
   }else if(MT==='lu'){
-    const col=(lu,name,id)=>`<h2>${id>=0?clink(club(id),name):esc(name)}</h2>${lu.map(x=>`<div class="lrow ${x.me?'me':''}"><span class="pos ${x.pos}">${x.pos==='W'?plab({pos:'W',sd:x.me?ST.me.sd:(ST.W.pl[x.id]||{}).sd}):x.pos}</span><div class="g1"><b>${x.me?esc(x.n)+' · YOU':(x.id>=0?`<a class="lk" data-a="pcard" data-v="${x.id}">${esc(x.n)}</a>`:esc(x.n))}</b>${x.sub?' <span class="pill">SUB</span>':''}<br>${kk('OVR '+Math.round(x.o)+' · '+x.m+"' played"+(x.on!=null?' · on '+mLab(r,x.on)+"'":'')+(x.off!=null?' · off '+mLab(r,x.off)+"'":''))}</div>${x.g?`<span class="mono">${'⚽'.repeat(Math.min(x.g,4))}</span>`:''}${x.a?`<span class="mono m">${x.a}A</span>`:''}${rb(x.r)}</div>`).join('')}`;
+    const col=(lu,name,id)=>`<h2>${id>=0?clink(club(id),name):esc(name)}</h2>${lu.map(x=>`<div class="lrow ${x.me?'me':''}"><span class="pos ${x.pos}">${SIDED[x.pos]?plab({pos:x.pos,sd:x.me?ST.me.sd:(ST.W.pl[x.id]||{}).sd}):x.pos}</span><div class="g1"><b>${x.me?esc(x.n)+' · YOU':(x.id>=0?`<a class="lk" data-a="pcard" data-v="${x.id}">${esc(x.n)}</a>`:esc(x.n))}</b>${x.sub?' <span class="pill">SUB</span>':''}<br>${kk('OVR '+Math.round(x.o)+' · '+x.m+"' played"+(x.on!=null?' · on '+mLab(r,x.on)+"'":'')+(x.off!=null?' · off '+mLab(r,x.off)+"'":''))}</div>${x.g?`<span class="mono">${'⚽'.repeat(Math.min(x.g,4))}</span>`:''}${x.a?`<span class="mono m">${x.a}A</span>`:''}${rb(x.r)}</div>`).join('')}`;
     body=r.lu?G('pad s6',col(r.lu[0],r.h,r.hid))+G('pad s6',col(r.lu[1],r.a,r.aid)):G('s12 empty','No lineup data for this match.');
   }else if(MT==='st'){
     const t=r.ts;
@@ -4686,10 +4699,10 @@ function upgradeSave(){
     for(const p of W.pl){if(!p)continue;shiftsOf(p);p.pa=Math.round(p.pa*oldF(p.age)/fOf(p,p.age)*10)/10;delete p.sks}
     notes.push('separate physical, technical and IQ peaks');
   }
-  // v18: wingers have a side (LW / RW)
-  if(me.pos==='W'&&!me.sd)me.sd=me.foot==='Left'?'L':'R';
-  for(const c of W.clubs){const ws=c.sq.map(id=>W.pl[id]).filter(p=>p&&p.pos==='W'&&!p.sd).sort((a,b)=>b.ovr-a.ovr);if(ws.length){const m=assignSides(ws);for(const p of ws)p.sd=m.get(p)}}
-  for(const p of W.pl)if(p&&p.pos==='W'&&!p.sd)p.sd=sideHash(p.n);
+  // v18/v19: wingers and full-backs have a side (LW / RW, LB / RB)
+  if(SIDED[me.pos]&&!me.sd)me.sd=me.foot==='Left'?'L':'R';
+  for(const pos of['W','FB'])for(const c of W.clubs){const ws=c.sq.map(id=>W.pl[id]).filter(p=>p&&p.pos===pos&&!p.sd).sort((a,b)=>b.ovr-a.ovr);if(ws.length){const m=assignSides(ws);for(const p of ws)p.sd=m.get(p)}}
+  for(const p of W.pl)if(p&&SIDED[p.pos]&&!p.sd)p.sd=sideHash(p.n);
   if(!me.sdev)me.sdev={};
   if(!me.amax)me.amax=Object.assign({},me.attr);
   if(me.pks==null)me.pks=0;if(me.tks==null)me.tks=0;if(me.iqs==null)me.iqs=0;delete me.sks;
@@ -4722,7 +4735,7 @@ function exportSave(){
 }
 const ACT={
   create:doCreate,
-  cf:d=>{if(d.k==='pos'&&(d.v==='LW'||d.v==='RW')){CF.pos='W';CF.side=d.v==='RW'?'R':'L'}else CF[d.k]=d.v;if(d.k==='pos'&&CF.arch!=='random')CF.arch=Object.keys(ARCH[CF.pos])[0]},
+  cf:d=>{if(d.k==='pos'&&(d.v==='LW'||d.v==='RW'||d.v==='LB'||d.v==='RB')){CF.pos=d.v.slice(1)==='W'?'W':'FB';CF.side=d.v[0]}else CF[d.k]=d.v;if(d.k==='pos'&&CF.arch!=='random')CF.arch=Object.keys(ARCH[CF.pos])[0]},
   yr:()=>{if(!ST.pend&&ST.phase==='youth')youthYear()},
   next:()=>{TAB='home';step()},
   chunk:d=>{for(let i=0;i<(+d.n||3)&&!ST.pend&&ST.phase==='play';i++){const n=ST.si;step();if(ST.si===n)break}},

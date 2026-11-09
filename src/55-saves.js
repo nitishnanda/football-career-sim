@@ -75,10 +75,10 @@ function upgradeSave(){
     for(const p of W.pl){if(!p)continue;shiftsOf(p);p.pa=Math.round(p.pa*oldF(p.age)/fOf(p,p.age)*10)/10;delete p.sks}
     notes.push('separate physical, technical and IQ peaks');
   }
-  // v18: wingers have a side (LW / RW)
-  if(me.pos==='W'&&!me.sd)me.sd=me.foot==='Left'?'L':'R';
-  for(const c of W.clubs){const ws=c.sq.map(id=>W.pl[id]).filter(p=>p&&p.pos==='W'&&!p.sd).sort((a,b)=>b.ovr-a.ovr);if(ws.length){const m=assignSides(ws);for(const p of ws)p.sd=m.get(p)}}
-  for(const p of W.pl)if(p&&p.pos==='W'&&!p.sd)p.sd=sideHash(p.n);
+  // v18/v19: wingers and full-backs have a side (LW / RW, LB / RB)
+  if(SIDED[me.pos]&&!me.sd)me.sd=me.foot==='Left'?'L':'R';
+  for(const pos of['W','FB'])for(const c of W.clubs){const ws=c.sq.map(id=>W.pl[id]).filter(p=>p&&p.pos===pos&&!p.sd).sort((a,b)=>b.ovr-a.ovr);if(ws.length){const m=assignSides(ws);for(const p of ws)p.sd=m.get(p)}}
+  for(const p of W.pl)if(p&&SIDED[p.pos]&&!p.sd)p.sd=sideHash(p.n);
   if(!me.sdev)me.sdev={};
   if(!me.amax)me.amax=Object.assign({},me.attr);
   if(me.pks==null)me.pks=0;if(me.tks==null)me.tks=0;if(me.iqs==null)me.iqs=0;delete me.sks;
