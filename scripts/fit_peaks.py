@@ -10,7 +10,7 @@ def comp(pk,pw,a,b):
             t=(age-21)/(pk-21);c[age-7]=f21+(1-f21)*(1-(1-t)**2)
         elif age<=pk+pw:c[age-7]=1
         else:
-            loss+=a+b*i;i+=1;c[age-7]=max(.3,1-loss)
+            loss+=min(.04,a+b*i);i+=1;c[age-7]=max(.3,1-loss)
     return c
 CP=comp(23,2,.010,.006);CT=comp(26,3,.004,.003);CI=comp(30,4,.004,.002)
 M=(.6,1.0,1.5)
