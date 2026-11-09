@@ -1,5 +1,5 @@
 function doCreate(){
-  newCareer({name:CF.name.trim()||'Player',nat:CF.nat,pos:CF.pos,arch:CF.arch,foot:CF.foot,ht:+CF.ht||180,frame:CF.frame,tier:CF.tier==='random'?'random':+CF.tier,seed:CF.seed.trim(),startYear:+CF.era});
+  newCareer({name:CF.name.trim()||'Player',nat:CF.nat,pos:CF.pos,side:CF.side,arch:CF.arch,foot:CF.foot,ht:+CF.ht||180,frame:CF.frame,tier:CF.tier==='random'?'random':+CF.tier,seed:CF.seed.trim(),startYear:+CF.era});
   TAB='home';INB={f:'all',sel:null,log:0};
 }
 function exportSave(){
@@ -8,7 +8,7 @@ function exportSave(){
 }
 const ACT={
   create:doCreate,
-  cf:d=>{CF[d.k]=d.v;if(d.k==='pos'&&CF.arch!=='random')CF.arch=Object.keys(ARCH[CF.pos])[0]},
+  cf:d=>{if(d.k==='pos'&&(d.v==='LW'||d.v==='RW')){CF.pos='W';CF.side=d.v==='RW'?'R':'L'}else CF[d.k]=d.v;if(d.k==='pos'&&CF.arch!=='random')CF.arch=Object.keys(ARCH[CF.pos])[0]},
   yr:()=>{if(!ST.pend&&ST.phase==='youth')youthYear()},
   next:()=>{TAB='home';step()},
   chunk:d=>{for(let i=0;i<(+d.n||3)&&!ST.pend&&ST.phase==='play';i++){const n=ST.si;step();if(ST.si===n)break}},

@@ -17,7 +17,7 @@ function vTop(){
   const me=ST.me,inj=me.inj>0;
   return`<header class="top"><div class="brand"><span class="logo">⚽</span><div><b>FOOTBALL CAREER SIM</b>${kk('Pro circuit')}</div></div>
   <nav class="nav">${tabBtns()}</nav>
-  <div class="hr"><div class="info"><b>OVR ${me.ovr} · ${esc(String(me.tier).toUpperCase())}</b>${kk(`Age ${me.age} · ${me.pos} · ${inj?'Injured '+me.inj+'w':'Fitness '+cond()+'%'}`)}</div>
+  <div class="hr"><div class="info"><b>OVR ${me.ovr} · ${esc(String(me.tier).toUpperCase())}</b>${kk(`Age ${me.age} · ${plab(me)} · ${inj?'Injured '+me.inj+'w':'Fitness '+cond()+'%'}`)}</div>
   <div class="sv ${SAVEOK?'':'off'}" title="${SAVEOK?'Autosave is on':'Saving is blocked'}"><span>${SAVEOK?(SAVET?'Saved':'Autosave'):'Not saving'}</span></div>
   <button class="srchbtn" data-a="srch" title="Search players and clubs ( / )" style="margin-left:0"><span>⌕</span><em>Search</em><kbd>/</kbd></button>
   <button class="ico gear" data-a="gear" title="Settings">⚙</button><button class="btn sm red" data-a="reset">New</button><button class="ico av" data-a="tab" data-v="career" title="Career">${ab(me.name).slice(0,2)}</button></div></header>`;
@@ -53,7 +53,7 @@ function vSeasonHero(){
   return G('shero',`<div class="k" style="font-size:13px;letter-spacing:.14em">${label(ST.season)} season</div>
   <div class="pills" style="margin-top:8px"><span class="pill live">Live campaign</span><span class="pill">${me.role==='youth'?'U18 League':esc(l.n)+' · '+ord(pos)}</span><span class="pill">Next: ${nx}</span></div>
   <div class="nm">${esc(me.name)}</div>
-  <div class="idl">${esc(club(me.cl).name)} · ${POSN[me.pos]} · ${me.ht} cm · ${esc(archName(me))}${me.role==='youth'?' · Academy':''}</div>
+  <div class="idl">${esc(club(me.cl).name)} · ${pname(me)} · ${me.ht} cm · ${esc(archName(me))}${me.role==='youth'?' · Academy':''}</div>
   <div class="rec"><span class="no">#${shirt(me)}</span><div class="box">${kk(rc2)}<b>${t.w}-${t.d}-${t.l}</b>${kk(t.p+' pts · '+(t.gf-t.ga>0?'+':'')+(t.gf-t.ga)+' GD')}</div>${avgBox}${lastBox}</div>
   ${fm?`<div class="fchips">${kk('Form')} ${fm}</div>`:''}
   <div style="margin-top:14px"><div class="prog"><span>${lbl}</span><span>Matchday ${pl} / ${md} · ${pct}%</span></div><div class="track"><i style="width:${pct}%"></i></div></div>
@@ -166,7 +166,7 @@ function vH2H(){
   const sd=selData(),f2=x=>x==null?'-':x.toFixed(2),rows=sd.rows.slice(0,sd.k+2),m=sd.me,ps=Math.round(sd.ps*100);
   const beat=r=>[m.ovr>r.ovr,(m.avg||0)>(r.avg||0),m.ga>r.ga].filter(Boolean).length;
   const need=sd.margin>=0?`You are ahead of the shirt by ${sd.margin.toFixed(1)} points.`:`You need ${(-sd.margin).toFixed(1)} more selection points to win a starting place.`;
-  return G('pad s12',`${ico('⚔','Competition for my place',POSN[me.pos])}
+  return G('pad s12',`${ico('⚔','Competition for my place',pname(me))}
   <div class="grid2" style="grid-template-columns:repeat(3,1fr)"><div class="tile">${kk('Chance to start')}<b class="n">${ps}%</b></div><div class="tile">${kk('Minutes per game')}<b class="n">${m.ap?Math.round(m.mn/m.ap):0}</b></div><div class="tile">${kk('Starts / games played')}<b class="n">${m.st}/${m.ap}</b></div></div>
   <div class="quote mt"><b>${need}</b><br><span class="m">The manager picks on form as well as ability: ${ST.me.role==='starter'?'you are first choice':ST.me.role==='rotation'?'you are in the rotation':'you are on the bench'}. A better average rating or more goal involvements than the player in front wins you minutes.</span></div>
   <div style="overflow-x:auto" class="mt"><table class="tb"><tr><th>Player</th><th class="r">Age</th><th class="r">OVR</th><th class="r">Avg rating</th><th class="r">G+A / game</th><th class="r">Apps</th><th class="r">Sel.</th><th class="r">You win</th></tr>

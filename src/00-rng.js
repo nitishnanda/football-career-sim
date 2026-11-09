@@ -18,3 +18,5 @@ function R(key){
     shuffle:a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(f()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
   };
 }
+
+const norm0=s=>String(s).normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase();   // accent- and case-insensitive key for names

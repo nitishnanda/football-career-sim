@@ -921,7 +921,7 @@ const ARX={
 "Declines earlier"
 ],
 "att": {
-"pac": 9,
+"pac": 6,
 "def": 3,
 "phy": 1,
 "pas": -4

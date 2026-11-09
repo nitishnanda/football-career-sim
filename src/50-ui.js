@@ -1,6 +1,9 @@
 let TAB='home',LGV=0,UIM=null,COMPACT=false,BRK=false,INB={f:'all',sel:null,log:0};
-const CF={name:'',nat:'England',pos:'ST',arch:'Poacher',foot:'Right',ht:182,frame:'Athletic',tier:'random',seed:'',era:2026};
-const PPOS={GK:[6,50],CB:[21,50],FB:[27,12],DM:[38,50],CM:[52,34],AM:[64,66],W:[76,88],ST:[91,50]};
+const CF={name:'',nat:'England',pos:'ST',side:'R',arch:'Poacher',foot:'Right',ht:182,frame:'Athletic',tier:'random',seed:'',era:2026};
+const PPOS={GK:[6,50],CB:[21,50],FB:[27,12],DM:[38,50],CM:[52,34],AM:[64,66],LW:[76,12],RW:[76,88],ST:[91,50]};
+// the create screen picks LW or RW; the engine position stays W and the side is kept separately
+const cfSel=p=>p==='LW'?CF.pos==='W'&&CF.side!=='R':p==='RW'?CF.pos==='W'&&CF.side==='R':CF.pos===p;
+const cfName=()=>pname({pos:CF.pos,sd:CF.side});
 const FRAMES=['Lean Wire','Athletic','Power Solid'],WMUL={'Lean Wire':.78,Athletic:.88,'Power Solid':.98};
 const DIR={pac:'Sprint mechanics & acceleration',sho:'Finishing patterns & shot technique',pas:'Ball progression & key passes',dri:'Close control & 1v1 take-ons',def:'Positioning & tackling timing',phy:'Strength & endurance block',div:'Diving range & recovery',han:'Handling & claiming crosses',kic:'Distribution & kicking',ref:'Reflex & reaction work',pos:'Positioning & sweeping'};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -54,7 +57,7 @@ function vCreate(){
   return`<div class="page" style="padding-top:24px"><div class="g12">
   ${G('pad s12',`<div class="row sp wr"><div>${kk('Prodigy intake protocol · age 7 to retirement')}<h1>Player creation & academy pathway</h1></div>
   <div class="steps"><div class="step on"><i>01</i><span class="sm">Identity & physicals</span></div><div class="step on"><i>02</i><span class="sm">Tactical archetype</span></div><div class="step"><i>03</i><span class="sm">Academy offers</span></div></div></div>`)}
-  ${G('pad s4',`<h2>Identity & bio ${kk('phase 1/3')}</h2><div class="tile row"><span class="crest lg">${ab(CF.name||'Player')}</span><div><b>${esc(CF.name||'Player')}</b><br>${kk(POSN[CF.pos]+' · age 7 · '+CF.nat)}</div></div>
+  ${G('pad s4',`<h2>Identity & bio ${kk('phase 1/3')}</h2><div class="tile row"><span class="crest lg">${ab(CF.name||'Player')}</span><div><b>${esc(CF.name||'Player')}</b><br>${kk(cfName()+' · age 7 · '+CF.nat)}</div></div>
   <div class="form"><label>${kk('Player full name')}<input data-f="name" value="${esc(CF.name)}" placeholder="Your player"></label>
   <label>${kk('Nationality & pathway')}<select data-f="nat">${o(NATS.map(n=>n[0]),CF.nat)}</select></label>
   <label>${kk('Preferred foot · weak foot '+'★'.repeat(wf)+'☆'.repeat(5-wf))}<div class="row">${['Left','Right','Both'].map(f=>`<button class="btn alt g1 ${CF.foot===f?'on':''}" data-a="cf" data-k="foot" data-v="${f}">${f}</button>`).join('')}</div></label>
@@ -62,8 +65,8 @@ function vCreate(){
   <label>${kk('Frame archetype')}<div class="row">${FRAMES.map(f=>`<button class="btn alt g1 sm ${CF.frame===f?'on':''}" data-a="cf" data-k="frame" data-v="${f}">${f}</button>`).join('')}</div></label>
   <label>${kk('Seed (optional)')}<input data-f="seed" value="${esc(CF.seed)}" placeholder="same seed, same league"></label></div>
   <div class="tile mt"><b>Homegrown status</b><br><span class="m sm">Seasons at an academy before 21 count towards squad homegrown quotas.</span></div>`)}
-  ${G('pad s4',`<h2>Tactical matrix ${kk('selected: '+CF.pos)}</h2><div class="pitch">${Object.entries(PPOS).map(([p,[x,y]])=>`<button class="pp ${CF.pos===p?'on':''}" style="left:${x}%;top:${y}%" data-a="cf" data-k="pos" data-v="${p}">${p}</button>`).join('')}</div>
-  <div class="m sm" style="margin:8px 0 2px">${POSN[CF.pos]}</div><h3 class="mt">Tactical specialisation</h3>
+  ${G('pad s4',`<h2>Tactical matrix ${kk('selected: '+(CF.pos==='W'?(CF.side==='R'?'RW':'LW'):CF.pos))}</h2><div class="pitch">${Object.entries(PPOS).map(([p,[x,y]])=>`<button class="pp ${cfSel(p)?'on':''}" style="left:${x}%;top:${y}%" data-a="cf" data-k="pos" data-v="${p}">${p}</button>`).join('')}</div>
+  <div class="m sm" style="margin:8px 0 2px">${cfName()}</div><h3 class="mt">Tactical specialisation</h3>
   ${archPicker()}`)}  ${G('pad s4',`<h2>Scout & offers ${kk('age 12')}</h2><div class="tile"><b>${TIERS.map((t,i)=>String(CF.tier)===String(i)?t.n:'').join('')||'Random talent'}</b><br><span class="m sm">Your potential is hidden. Scouts only see what you show on the pitch.</span></div>
   <h3 class="mt">Pathway</h3><div class="tile sm">Ages 7–11 grassroots, then three academy offers at 12. Academy years up to 14 are summarised. From 15 every match is simulated.</div>
   <h3 class="mt">Era</h3>${eraPicker()}
@@ -148,7 +151,7 @@ function vLog(){
 function vRadar(){
   const rows=race(),mi=rows.findIndex(r=>r.me),top=rows.slice(0,4),all=rows.slice(0,10),den=all.reduce((a,r)=>a+Math.exp(r.sc/6),0)||1;
   const sh=r=>Math.round(Math.exp(r.sc/6)/den*100);
-  const row=(r,i)=>`<div class="lrow ${r.me?'me':''}"><span class="no">${i+1}</span><div class="g1"><b>${esc(r.n)}${r.me?' · YOU':''}</b><br>${kk(esc(club(r.c).name)+' · '+r.pos)}</div><div style="text-align:right"><span class="mono sm">${r.g} G · ${r.a} A</span><br>${kk(i<10?sh(r)+'% vote share':'outside top 10')}</div></div>`;
+  const row=(r,i)=>`<div class="lrow ${r.me?'me':''}"><span class="no">${i+1}</span><div class="g1"><b>${esc(r.n)}${r.me?' · YOU':''}</b><br>${kk(esc(club(r.c).name)+' · '+plab(r))}</div><div style="text-align:right"><span class="mono sm">${r.g} G · ${r.a} A</span><br>${kk(i<10?sh(r)+'% vote share':'outside top 10')}</div></div>`;
   return G('pad s4',`<h2>Ballon d'Or radar ${kk('live polling')}</h2>${top.map(row).join('')||'<div class="empty">Builds as the season goes on.</div>'}
   ${mi>=4?`<div class="m c">···</div>${row(rows[mi],mi)}`:''}
   <div class="note"><b>Jury weighting.</b> European trophies and Champions League knockout ties count for more than domestic form. A league title adds less than a Champions League win.</div>`);
@@ -211,7 +214,7 @@ function vMyGame(r){
   if(s&&r.duel){
     const att=Math.max(4,s.tk+s.ic+s.dr+g.int(2,5)),w=clamp(Math.round(att*(.5+(s.rating-RAVG)*.08+(me.ovr-r.duel.ovr)*.006)),0,att),f1=g.int(0,3),f2=g.int(0,3),d1=g.int(0,3),d2=g.int(0,4);
     const cmp=(l,x,y,t)=>`<div class="cmp"><div class="row sp"><span>${x}</span><span class="m">${l}</span><span>${y}</span></div><div class="two"><div class="bar"><i style="width:${t?pct(x,t):x*20}%"></i></div><div class="bar"><i style="width:${t?pct(y,t):y*20}%"></i></div></div></div>`;
-    duel=G('pad s12',`<h2>Duel of the match ${kk('you vs '+esc(r.duel.n))}</h2><div class="row sp"><div class="row"><span class="crest">${ab(me.name)}</span><div><b>${esc(me.name)}</b><br>${kk(me.pos+' · '+r.min+' min')}</div></div><span class="pill ${w*2>att?'good':''}">${w*2>att?'ADVANTAGE: YOU':'ADVANTAGE: THEM'}</span><div class="row"><div style="text-align:right"><b>${esc(r.duel.n)}</b><br>${kk(me.pos+' · OVR '+r.duel.ovr)}</div><span class="crest">${ab(r.duel.n)}</span></div></div>
+    duel=G('pad s12',`<h2>Duel of the match ${kk('you vs '+esc(r.duel.n))}</h2><div class="row sp"><div class="row"><span class="crest">${ab(me.name)}</span><div><b>${esc(me.name)}</b><br>${kk(plab(me)+' · '+r.min+' min')}</div></div><span class="pill ${w*2>att?'good':''}">${w*2>att?'ADVANTAGE: YOU':'ADVANTAGE: THEM'}</span><div class="row"><div style="text-align:right"><b>${esc(r.duel.n)}</b><br>${kk(plab(me)+' · OVR '+r.duel.ovr)}</div><span class="crest">${ab(r.duel.n)}</span></div></div>
     ${cmp('GROUND DUELS WON',w,att-w,att)}${cmp('FOULS COMMITTED',f1,f2,0)}${cmp('LOST POSSESSIONS',d1,d2,0)}
     <div class="note"><b>Analyst take.</b> ${esc(me.name)} ${w*2>att?'won the individual battle':'was kept quiet'} against ${esc(r.duel.n)}${s.kp>=2?', and his passing created '+s.kp+' chances':''}${r.hg+r.ag===0?'. A tight game with little between the sides.':'.'}</div>`);
   }
@@ -226,7 +229,7 @@ function vMyGame(r){
   <div class="note">Next: ${esc((nextFixObj()||{c:'season break'}).c)}</div>`):''}
   ${duel}`;
 }
-const ME_POSLABEL=()=>({GK:'Goalkeeper',CB:'Defender',FB:'Full-back',DM:'Midfield',CM:'Midfield',AM:'Playmaker',W:'Winger',ST:'Striker'}[ST.me.pos]);
+const ME_POSLABEL=()=>({GK:'Goalkeeper',CB:'Defender',FB:'Full-back',DM:'Midfield',CM:'Midfield',AM:'Playmaker',W:pname(ST.me),ST:'Striker'}[ST.me.pos]);
 
 /* ---------- league & cups ---------- */
 function zc(lg,i,n){
@@ -287,7 +290,7 @@ function vOffer(it){
   const o=it.o,me=ST.me;
   if(o.k==='retire')return G('pad',`<h1>Retire from football</h1><p class="m">${me.age} years old. Peak OVR ${me.peak}. Your legacy will be scored on trophies, awards, goals and peak rating.</p><button class="btn" data-a="acc" data-v="${it.i}">Confirm retirement</button>`);
   const c=club(o.c),I=offerInfo(o),chg=I.cur?Math.round((o.w/I.cur-1)*100):0,x=pct(o.w-I.min,Math.max(1,I.top.w-I.min)),cx=pct(I.cur-I.min,Math.max(1,I.top.w-I.min)),tier=c.base>=82?1:c.base>=76?2:3;
-  const memo=I.old?`Replaces ageing ${I.old.n} (${I.old.age}). ${o.role==='starter'?'A guaranteed starting slot':'A place in the rotation'} with performance bonuses. ${esc(c.name)} will build the ${POSN[me.pos].toLowerCase()} position around your profile.`:'A good fit for your profile.';
+  const memo=I.old?`Replaces ageing ${I.old.n} (${I.old.age}). ${o.role==='starter'?'A guaranteed starting slot':'A place in the rotation'} with performance bonuses. ${esc(c.name)} will build the ${pname(me).toLowerCase()} position around your profile.`:'A good fit for your profile.';
   return G('pad',`<div class="row sp wr"><div class="row">${crestN(c.name,'lg')}<div><span class="pill hot">${it.tag}</span> <span class="pill">${LGN[c.lg].n.toUpperCase()}</span><h1 style="margin:6px 0 0">${esc(c.name)}</h1>${kk('Tier '+tier+' · '+LGN[c.lg].nat+' · '+esc(c.gd||c.name+' Stadium'))}</div></div></div>
   ${o.k==='transfer'?(()=>{const cu=club(me.parent>=0?me.parent:me.cl),st=o.sell||'ok';return`<div class="note" style="margin:14px 0 0;border-color:${st==='ok'?'rgba(95,213,143,.5)':st==='ask'?'rgba(255,209,102,.5)':'rgba(255,107,96,.5)'}"><b>${st==='ok'?'✓ '+esc(cu.name)+' have agreed to sell you':st==='ask'?esc(cu.name)+' are reluctant to sell':esc(cu.name)+' say you are not for sale'}</b><br><span class="m">${esc(sellWhy(o))}.${o.asked&&st!=='ok'?' Your transfer request was refused.':''}</span></div>`})():''}
   ${o.free?`<div class="note" style="margin:14px 0 0;border-color:rgba(95,213,143,.5)"><b>Free transfer</b><br><span class="m">Your contract has run out, so there is no fee and your club cannot stop you leaving.</span></div>`:''}${o.k==='keep'?`<div class="note" style="margin:14px 0 0"><b>Your current contract</b><br><span class="m">${o.y} season${o.y>1?'s':''} left at €${o.w}k a week. ${o.y===1?'Next summer you can leave for free, and clubs will bid less for you this year.':''}</span></div>`:''}  <div class="mt2">${kk(o.k==='loan'?'Loan agreement':'Transfer bid')}<div class="big" style="font-size:36px">${o.k==='loan'?'Loan':o.fee?euro(o.fee):'Free'}</div>${o.bids&&o.bids.length>1?`<div class="m sm mt">Bid history: ${o.bids.slice(0,o.bi+1).map(euro).join(' → ')}${o.maxed||o.bi>=o.bids.length-1?' (their limit)':''}. Spending power: about ${euro(clubMeans(c))}.</div>`:o.k==='transfer'?`<div class="m sm mt">Spending power: about ${euro(clubMeans(c))}.</div>`:''}</div>
@@ -303,7 +306,7 @@ function vOffer(it){
 }
 function vReinvent(r){
   const me=ST.me,W=a=>a[0]+'-'+a[1],cur=peakWindows(me).st;
-  const card=(o,i)=>`<div class="tile mt"><div class="row sp wr"><div><span class="pill hot">${esc(POSN[o.pos])}</span> <b style="font-size:19px">${esc(o.arch)}</b><br>${kk(o.pos===me.pos?'Same position, new style':'Move from '+POSN[me.pos].toLowerCase())}</div><button class="btn" data-a="rein" data-v="${i}">Switch to this role</button></div>
+  const card=(o,i)=>`<div class="tile mt"><div class="row sp wr"><div><span class="pill hot">${esc(pname({pos:o.pos,sd:me.sd}))}</span> <b style="font-size:19px">${esc(o.arch)}</b><br>${kk(o.pos===me.pos?'Same position, new style':'Move from '+pname(me).toLowerCase())}</div><button class="btn" data-a="rein" data-v="${i}">Switch to this role</button></div>
     <div class="grid mt" style="grid-template-columns:repeat(3,1fr)"><div class="tile">${kk('Overall now')}<b class="n">${o.ovr}</b><span class="m sm">${o.ovr-me.ovr>=0?'+':''}${o.ovr-me.ovr} (adapting: -${o.pen})</span></div><div class="tile">${kk('In 3 years')}<b class="n">~${o.p3}</b><span class="m sm">${o.p3>=r.stay?'+':''}${o.p3-r.stay} vs staying</span></div><div class="tile">${kk('Output peak')}<b class="n">${W(o.st)}</b><span class="m sm">${o.fit>=0?'Suits your attributes':'A stretch for your attributes'}</span></div></div>
     <div class="m sm mt"><b>Why it works:</b> ${esc(o.why||'')} ${esc(ARX[o.pos][o.arch].blurb)}</div></div>`;
   return G('pad',`<span class="pill hot">REINVENTION</span> ${kk(label(ST.season))}<h1>${esc(r.title)}</h1><p>${esc(r.body)}</p>
@@ -350,7 +353,7 @@ function vAttrs(me){
 }
 function vCareer(){
   const me=ST.me,A=me.attr,v=mval(),wt=Math.round((me.ht-100)*WMUL[me.frame||'Athletic']);
-  return`<div class="g12">${G('pad s4',`<div class="row" style="gap:16px"><div class="ovr-ring" style="--p:${me.ovr}"><b>${me.ovr}</b></div><div><b style="font-size:20px">${esc(me.name)}</b><br>${kk(POSN[me.pos]+' · '+archName(me))}<br><span class="sm">${stars(me.pa)}</span> <span class="m sm">${esc(me.tier)}</span></div></div>
+  return`<div class="g12">${G('pad s4',`<div class="row" style="gap:16px"><div class="ovr-ring" style="--p:${me.ovr}"><b>${me.ovr}</b></div><div><b style="font-size:20px">${esc(me.name)}</b><br>${kk(pname(me)+' · '+archName(me))}<br><span class="sm">${stars(me.pa)}</span> <span class="m sm">${esc(me.tier)}</span></div></div>
   <div class="mt">${vAttrs(me)}</div>
   <div class="tile mt sm"><div class="row sp"><span class="m">Frame</span><span>${me.frame||'Athletic'} · ${me.ht} cm · ${wt} kg</span></div><div class="row sp"><span class="m">Foot</span><span>${me.foot} · weak foot ${'★'.repeat(me.wf||3)}</span></div><div class="row sp"><span class="m">Nationality</span><span>${esc(me.nat)}</span></div></div>`)}
   <div class="s8" style="display:grid;gap:16px">${G('pad',`<h2>Contract & value</h2><div class="grid"><div class="tile">${kk('Value')}<b class="n">${euro(v)}</b></div><div class="tile">${kk('Wage / wk')}<b class="n">${me.ct?'€'+me.ct.w+'k':'-'}</b></div><div class="tile">${kk('Expires')}<b class="n">${me.ct?me.ct.exp:'-'}</b></div><div class="tile">${kk('Peak OVR')}<b class="n">${me.peak}</b></div>${primeTxt(me).map(r=>`<div class="tile">${kk(r[0]+' peak')}<b class="n">${r[1]}</b><span class="m sm">${r[2]}</span></div>`).join('')}</div></div>${me.moves.length?`<div class="m sm mt">${me.moves.map(m=>`${m.s}: ${m.k==='loan'?'loan':m.k==='return'?'returned':'moved'} ${esc(m.from)} → ${esc(m.to)}`).join('<br>')}</div>`:''}`)}
@@ -365,7 +368,7 @@ function vCareer(){
 /* ---------- youth / retired ---------- */
 function vYouth(){
   const me=ST.me,lab=label(ST.yr0+me.age-7);
-  return`<div class="page" style="padding-top:24px"><div class="g12">${G('pad s12',`<div class="row wr" style="gap:20px"><div class="ovr-ring" style="--p:${me.pa}"><b>?</b></div><div class="g1"><h1>${esc(me.name)}</h1>${kk(POSN[me.pos]+' · '+archName(me)+' · age '+me.age+(me.cl>=0?' · '+esc(club(me.cl).name)+' Academy':' · local club'))}<div style="margin-top:6px">Potential <span style="letter-spacing:.1em">${stars(me.pa)}</span></div><div class="m sm mt">No scout rates an academy player's overall — that comes once you turn pro.</div></div>
+  return`<div class="page" style="padding-top:24px"><div class="g12">${G('pad s12',`<div class="row wr" style="gap:20px"><div class="ovr-ring" style="--p:${me.pa}"><b>?</b></div><div class="g1"><h1>${esc(me.name)}</h1>${kk(pname(me)+' · '+archName(me)+' · age '+me.age+(me.cl>=0?' · '+esc(club(me.cl).name)+' Academy':' · local club'))}<div style="margin-top:6px">Potential <span style="letter-spacing:.1em">${stars(me.pa)}</span></div><div class="m sm mt">No scout rates an academy player's overall — that comes once you turn pro.</div></div>
   <button class="btn" data-a="yr">Play ${lab} season →</button></div><div class="m sm mt">Seasons up to 14 are summarised. Match-by-match play starts at 15.</div>`)}
   ${G('pad s12',`<h2>Youth career</h2>${careerTable()}`)}</div><button class="btn alt" data-a="reset">New career</button></div>`;
 }

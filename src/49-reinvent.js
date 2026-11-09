@@ -71,7 +71,7 @@ function reinventCheck(){
 function reinvent(i){
   const rn=ST.pend&&ST.pend.rein,me=ST.me;if(!rn||!rn.opts[i])return;
   const o=rn.opts[i],A=Object.assign({},me.attr),oldSub=me.sub?Object.assign({},me.sub):null,fromPos=me.pos,fromArch=me.arch;
-  me.pos=o.pos;me.arch=o.arch;me.archHidden=0;me.focus=null;me.dev={};me.sdev={};
+  me.pos=o.pos;me.arch=o.arch;me.archHidden=0;if(me.pos==='W'&&!me.sd)me.sd=me.foot==='Left'?'L':'R';me.focus=null;me.dev={};me.sdev={};
   const keys=me.pos==='GK'?GKK:OUTK,w=OVW[me.pos],P=PROF[me.pos],ar=archOf(me).att||{};
   let sw=0,so=0;keys.forEach((k,j)=>{sw+=w[j];so+=w[j]*(A[k]||0)});
   const nov=so/sw,pen=o.pen,F=fOf(me,me.age);
@@ -86,7 +86,7 @@ function reinvent(i){
   me.amax=Object.assign({},me.gd||me.attr);me.s0=Object.assign({},me.sub||{});me.role=calcRole();
   const nm=fromPos===me.pos?fromArch+' → '+me.arch:fromArch+' ('+fromPos+') → '+me.arch+' ('+me.pos+')';
   logArch('Reinvented: '+nm);
-  addMsg('club','Reinvention: '+me.arch,`You are now a ${me.arch}${fromPos===me.pos?'':' ('+POSN[me.pos].toLowerCase()+')'}. Your attributes carry over; it will take a season to settle in. ${archOf(me).blurb}`);
+  addMsg('club','Reinvention: '+me.arch,`You are now a ${me.arch}${fromPos===me.pos?'':' ('+pname(me).toLowerCase()+')'}. Your attributes carry over; it will take a season to settle in. ${archOf(me).blurb}`);
   ST.pend.rein=null;
   if(ST.pend.avg!=null)ST.pend.opts=makeOffers(ST.pend.avg);
 }

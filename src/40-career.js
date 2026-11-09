@@ -51,7 +51,7 @@ function newCareer(o){
   const t=o.tier==='random'||o.tier==null?TIERS[g.wpick([0,1,2,3],i=>[.45,.35,.17,.03][i])]:TIERS[+o.tier];
   const pa=clamp(g.norm(t.m,t.s),66,98);
   let arch=o.arch,hid=0;if(!arch||arch==='random'||!ARX[o.pos][arch]){arch=g.pick(Object.keys(ARX[o.pos]));hid=o.arch==='random'?1:0}
-  const me={name:o.name||'Player',nat:o.nat||'England',pos:o.pos,arch,archHidden:hid,foot:o.foot||'Right',ht:o.ht||180,pa:Math.round(pa*10)/10,tier:t.n,age:7,gap:0,dev:{},sdev:{},base:0,cl:-1,parent:-1,role:'youth',form:[],inj:0,sus:0,rows:[],hon:[],aw:[],moves:[],focus:null,ss:null,trust:60,caps:0,ig:0,nr:null,tx:{},a0:null,tn:0,wf:o.foot==='Both'?5:3,frame:o.frame||'Athletic'};
+  const me={name:o.name||'Player',nat:o.nat||'England',pos:o.pos,sd:o.pos==='W'?(o.side||(o.foot==='Left'?'L':'R')):undefined,arch,archHidden:hid,foot:o.foot||'Right',ht:o.ht||180,pa:Math.round(pa*10)/10,tier:t.n,age:7,gap:0,dev:{},sdev:{},base:0,cl:-1,parent:-1,role:'youth',form:[],inj:0,sus:0,rows:[],hon:[],aw:[],moves:[],focus:null,ss:null,trust:60,caps:0,ig:0,nr:null,tx:{},a0:null,tn:0,wf:o.foot==='Both'?5:3,frame:o.frame||'Athletic'};
   me.brk=rollBrk(g,o.pos,t.n);
   // personal peak shifts in years for the physical, technical and IQ components (see COMPS): negative peaks early, positive late
   me.pks=clamp(Math.round(R(seed+'|pks').norm(0,2.2)*10)/10,-5,5);me.tks=clamp(Math.round(R(seed+'|tks').norm(0,2.2)*10)/10,-5,5);me.iqs=clamp(Math.round(R(seed+'|iqs').norm(0,3.2)*10)/10,-7,7);
@@ -269,8 +269,8 @@ function pscore(pos,ap,g,a,avg,eg,cs,tb,ovr,vis){
 }
 function race(){
   const W=ST.W,me=ST.me,L=me.ss.lg,rows=[];
-  for(const p of W.pl)if(p.cl>=0&&p.ap>=4&&club(p.cl).lg<NTOP)rows.push({n:p.n,c:p.cl,pos:p.pos,g:p.g,a:p.a,ap:p.ap,sc:pscore(p.pos,p.ap,p.g,p.a,p.rs/p.ap,p.eg,p.cs,eurPts(p.cl).pts,p.ovr,eurPts(p.cl).eu?1:.75)});
-  if(L.ap>=4&&club(me.cl).lg<NTOP)rows.push({n:me.name,c:me.cl,me:1,pos:me.pos,g:L.g,a:L.a,ap:L.ap,sc:pscore(me.pos,L.ap,L.g,L.a,L.rs/L.rn,me.ss.eu.g,L.cs,eurPts(me.cl).pts,me.ovr,eurPts(me.cl).eu?1:.75)});
+  for(const p of W.pl)if(p.cl>=0&&p.ap>=4&&club(p.cl).lg<NTOP)rows.push({n:p.n,c:p.cl,pos:p.pos,sd:p.sd,g:p.g,a:p.a,ap:p.ap,sc:pscore(p.pos,p.ap,p.g,p.a,p.rs/p.ap,p.eg,p.cs,eurPts(p.cl).pts,p.ovr,eurPts(p.cl).eu?1:.75)});
+  if(L.ap>=4&&club(me.cl).lg<NTOP)rows.push({n:me.name,c:me.cl,me:1,pos:me.pos,sd:me.sd,g:L.g,a:L.a,ap:L.ap,sc:pscore(me.pos,L.ap,L.g,L.a,L.rs/L.rn,me.ss.eu.g,L.cs,eurPts(me.cl).pts,me.ovr,eurPts(me.cl).eu?1:.75)});
   for(const r of rows)r.sc=bdoAdj(r.sc,r.me,r.n);
   return rows.sort((a,b)=>b.sc-a.sc);
 }
