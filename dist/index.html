@@ -2153,8 +2153,7 @@ const xv=(p,k)=>{const x=p.x;if(!x)return 0;return Array.isArray(x)?(x[XK.indexO
      Dribbling  take-ons completed or lost, fouls won
      Defending  tackles, interceptions, blocks, duels, being dribbled past, fouls and cards, goals conceded and clean sheets (a goalkeeper's saves)
    Each position leans on different categories (BKW, weights summing to 1) and the rating is the sum:
-     rating = 6.0 + sum(score x weight x modifier)       modifier 4 for a positive score, 3 for a negative one, so a rating runs from 3.0 to 10.0
-   (anything above 9.0 gets a small stretch, BKTAIL, because 10.0 would otherwise need all five categories perfect)
+     rating = 6.5 + sum(score x weight x modifier)       modifier 4 for a positive score, 3 for a negative one, kept between 3.0 and 10.0
    The stats feeding each category are the same ones, with the same weights, as the fitted model of real player-matches (REAL.rating); a category's raw value is how
    far its stats are from an average game at the position, in rating points, then scaled by BKP (how much counts as perfect, a little less for a good game than a bad one so standout games can reach 9s and 10s) and lifted by BKP.c, because a
    normal professional game is a little above zero. The part of a rating that no stat explains (style, noise, the archetype) is added to Impact. The bars show the scores directly. */
@@ -2178,7 +2177,7 @@ function bkExp(pos,k,m,G){
 }
 /* per position: c = the lift every category gets, k = how many spreads of a category make it perfect, sd = each category's typical spread over a game (fitted by
    test/fit_bk.js so that ratings keep the distribution of the fitted model: the same average, spread and share of 8s, 9s and 10s) */
-const BKP={ST:{c:0.24,k:3.4,b:1,sd:[0.658,0.282,0.152,0.12,0.235]},W:{c:0.28,k:3.6,b:1,sd:[0.568,0.215,0.203,0.12,0.243]},AM:{c:0.3,k:2.8,b:1,sd:[0.584,0.207,0.225,0.12,0.233]},CM:{c:0.26,k:3.6,b:1,sd:[0.413,0.13,0.215,0.12,0.224]},DM:{c:0.24,k:4.4,b:1,sd:[0.362,0.12,0.199,0.12,0.235]},CB:{c:0.2,k:4.7,b:1,sd:[0.421,0.12,0.142,0.12,0.311]},FB:{c:0.2,k:3.4,b:1,sd:[0.429,0.12,0.177,0.12,0.263]},GK:{c:0.32,k:3.3,b:1,sd:[0.414,0.12,0.12,0.12,0.571]}};
+const BKP={ST:{c:0.12,k:3.3,b:1,sd:[0.658,0.282,0.152,0.12,0.235]},W:{c:0.16,k:3.5,b:1,sd:[0.568,0.215,0.203,0.12,0.243]},AM:{c:0.16,k:2.8,b:1,sd:[0.584,0.207,0.225,0.12,0.233]},CM:{c:0.12,k:3.5,b:1,sd:[0.413,0.13,0.215,0.12,0.224]},DM:{c:0.12,k:4.6,b:1,sd:[0.362,0.12,0.199,0.12,0.235]},CB:{c:0.06,k:4.4,b:1,sd:[0.421,0.12,0.142,0.12,0.311]},FB:{c:0.06,k:3.3,b:1,sd:[0.429,0.12,0.177,0.12,0.263]},GK:{c:0.18,k:3.2,b:1,sd:[0.414,0.12,0.12,0.12,0.571]}};
 // the five raw category values for a stat line, in rating points relative to an average game at the position
 function bkRaw(pos,f){
   const M=RM.model[pos]||RM.model.CM,G=RM.gen[pos]||{},W=M.w,m=f.m90||1;
@@ -2193,9 +2192,9 @@ function bkScores(pos,f,noise){
   const P=BKP[pos]||BKP.CM,r=bkRaw(pos,f);r[0]+=noise||0;
   return r.map((v,i)=>clamp(P.c+v/(P.k*P.sd[i]*(v>0?P.b:1)),-1,1));
 }
-const bkSum=(pos,s)=>{const w=BKW[pos]||BKW.CM;let r=6;for(let i=0;i<5;i++)r+=w[i]*(s[i]>=0?4:3)*s[i];return r};
-// the sum only reaches 10 when every category is perfect, so a standout game (above 9.0) is stretched a little: a hat-trick in a win reaches 10 now and then
-const BKTAIL=2,bkBonus=r=>r>9?(r-9)*BKTAIL:0;
+const bkSum=(pos,s)=>{const w=BKW[pos]||BKW.CM;let r=6.5;for(let i=0;i<5;i++)r+=w[i]*(s[i]>=0?4:3)*s[i];return r};
+// a small stretch above 9.0 so a standout game (a hat-trick in a win) can reach 10.0 now and then
+const BKTAIL=.8,bkBonus=r=>r>9?(r-9)*BKTAIL:0;
 const rateOf=(pos,s)=>{const r=bkSum(pos,s);return clamp(Math.round((r+bkBonus(r))*10)/10,3,10)};
 const bkPts=(pos,i,s)=>(BKW[pos]||BKW.CM)[i]*(s>=0?4:3)*s;
 function breakdown(pos,f,rating,sc){
@@ -4725,15 +4724,15 @@ function vShotMap(){
 // a centred bar: the category score from -1 to +1, filled from the middle line outwards in the colour of that score
 const bkBar=sc=>{const w=Math.min(1,Math.abs(sc))*50;return`<div class="bkbar"><i class="${bkCls(sc)} ${sc>=0?'bp':'bn'}" style="${sc>=0?'left:50%':'right:50%'};width:${w}%"></i></div>`};
 const sgn=v=>(v>=0?'+':'')+v.toFixed(2);
-// one match: the category bars, then how the rating adds up from 6.0
+// one match: the category bars, then how the rating adds up from 6.5
 function vBk(pos,bd,rating){
   if(!bd||!bd.bs)return'';
   const cats=bkCats(pos),W=BKW[pos]||BKW.CM,pts=cats.map(([,i])=>bkPts(pos,i,bd.bs[i])),tot=pts.reduce((a,b)=>a+b,0);
-  return`<h3 class="mt">Rating breakdown</h3><div class="bkhead"><span class="m sm">Every rating starts at 6.0</span><span class="mono sm">score, -1 to +1</span></div>
+  return`<h3 class="mt">Rating breakdown</h3><div class="bkhead"><span class="m sm">Every rating starts at 6.5</span><span class="mono sm">score, -1 to +1</span></div>
   ${cats.map(([lab,i])=>`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(bd.bs[i])}</div>`).join('')}
-  <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.00</b></div>
+  <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.50</b></div>
   ${cats.map(([lab,i],j)=>`<div class="kv"><span>${lab} <span class="m sm">${sgn(bd.bs[i])} × ${Math.round(W[i]*100)}% × ${bd.bs[i]>=0?4:3}</span></span><b class="mono" style="color:var(--${pts[j]>=.05?'good':pts[j]<=-.05?'badc':'tx'})">${sgn(pts[j])}</b></div>`).join('')}
-  ${6+tot>9.05?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bkBonus(6+tot))}</b></div>`:''}<div class="kv"><span><b>Rating</b>${rating<=3||rating>=10?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Each score weighs differently by position. A positive score is worth up to 4 rating points, a negative one up to 3. Scores come from the match stats, in the same proportions as 91,000 real player-matches.</div>`;
+  ${6.5+tot>9.05?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bkBonus(6.5+tot))}</b></div>`:''}<div class="kv"><span><b>Rating</b>${rating<=3||rating>=10?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Each score weighs differently by position. A positive score is worth up to 4 rating points, a negative one up to 3 (ratings stay between 3 and 10). Scores come from the match stats, in the same proportions as 91,000 real player-matches.</div>`;
 }
 // the average game: this role's average category score, a colour strip of recent games, and how each role he has played compares
 function vProfile(){

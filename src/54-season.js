@@ -218,15 +218,15 @@ function vShotMap(){
 // a centred bar: the category score from -1 to +1, filled from the middle line outwards in the colour of that score
 const bkBar=sc=>{const w=Math.min(1,Math.abs(sc))*50;return`<div class="bkbar"><i class="${bkCls(sc)} ${sc>=0?'bp':'bn'}" style="${sc>=0?'left:50%':'right:50%'};width:${w}%"></i></div>`};
 const sgn=v=>(v>=0?'+':'')+v.toFixed(2);
-// one match: the category bars, then how the rating adds up from 6.0
+// one match: the category bars, then how the rating adds up from 6.5
 function vBk(pos,bd,rating){
   if(!bd||!bd.bs)return'';
   const cats=bkCats(pos),W=BKW[pos]||BKW.CM,pts=cats.map(([,i])=>bkPts(pos,i,bd.bs[i])),tot=pts.reduce((a,b)=>a+b,0);
-  return`<h3 class="mt">Rating breakdown</h3><div class="bkhead"><span class="m sm">Every rating starts at 6.0</span><span class="mono sm">score, -1 to +1</span></div>
+  return`<h3 class="mt">Rating breakdown</h3><div class="bkhead"><span class="m sm">Every rating starts at 6.5</span><span class="mono sm">score, -1 to +1</span></div>
   ${cats.map(([lab,i])=>`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(bd.bs[i])}</div>`).join('')}
-  <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.00</b></div>
+  <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.50</b></div>
   ${cats.map(([lab,i],j)=>`<div class="kv"><span>${lab} <span class="m sm">${sgn(bd.bs[i])} × ${Math.round(W[i]*100)}% × ${bd.bs[i]>=0?4:3}</span></span><b class="mono" style="color:var(--${pts[j]>=.05?'good':pts[j]<=-.05?'badc':'tx'})">${sgn(pts[j])}</b></div>`).join('')}
-  ${6+tot>9.05?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bkBonus(6+tot))}</b></div>`:''}<div class="kv"><span><b>Rating</b>${rating<=3||rating>=10?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Each score weighs differently by position. A positive score is worth up to 4 rating points, a negative one up to 3. Scores come from the match stats, in the same proportions as 91,000 real player-matches.</div>`;
+  ${6.5+tot>9.05?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bkBonus(6.5+tot))}</b></div>`:''}<div class="kv"><span><b>Rating</b>${rating<=3||rating>=10?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Each score weighs differently by position. A positive score is worth up to 4 rating points, a negative one up to 3 (ratings stay between 3 and 10). Scores come from the match stats, in the same proportions as 91,000 real player-matches.</div>`;
 }
 // the average game: this role's average category score, a colour strip of recent games, and how each role he has played compares
 function vProfile(){

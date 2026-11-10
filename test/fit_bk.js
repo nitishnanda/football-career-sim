@@ -20,7 +20,7 @@ const out=await p.evaluate(()=>{
     const raws=games.map(x=>{const r=bkRaw(pos,x.f);r[0]+=x.n;return r}),sd=[0,1,2,3,4].map(i=>st(raws.map(r=>r[i]))[1]);
     BKP[pos].sd=sd.map(v=>Math.max(v,.12));
     let best=null;
-    for(const bb of[1])for(let c=0;c<=.5;c+=.02)for(let k=1.5;k<=5;k+=.1){
+    for(const bb of[1])for(let c=-.3;c<=.5;c+=.02)for(let k=1.5;k<=5;k+=.1){
       BKP[pos].c=c;BKP[pos].k=k;BKP[pos].b=bb;const N=games.map(x=>rateOf(pos,bkScores(pos,x.f,x.n))),[nm,ns]=st(N);
       const e=(nm-om)**2*400+(ns-os)**2*200+(pc(N,8)-pc(O,8))**2*30+(pc(N,9)-pc(O,9))**2*400+(pc(N,10)-pc(O,10))**2*3000;
       if(!best||e<best.e)best={e,c:+c.toFixed(2),k:+k.toFixed(2),b:bb};
