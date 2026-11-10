@@ -42,8 +42,14 @@ function strength(xi){
 const PRI=REAL.priors||{g:{},a:{}};
 // share of his team's goals/assists while on the pitch: his own evidence-based record if we have one, else the real position average scaled by quality
 const CG={ST:.078,W:.14,AM:.097,CM:.075,DM:.045,FB:.055,CB:.045,GK:0},CA={ST:.045,W:.07,AM:.07,CM:.05,DM:.04,FB:.05,CB:.04,GK:0};   // how fast a player's share grows with quality over his team's XI
-function gshare(x,ref){const p=x.p;if(p.gs!=null)return p.gs;const mu=PRI.g[x.pos],d=clamp((p.sc||p.ovr)-ref,-12,10);return mu==null?(x.pos==='GK'?0:SCW[x.pos]/23.4*Math.exp((CG[x.pos]||.04)*(d-6))):mu*Math.exp((CG[x.pos]||.04)*(d-6))*(p.gm||1)}
-function ashare(x,ref){const p=x.p;if(p.asr!=null)return p.asr;const mu=PRI.a[x.pos],d=clamp((p.ac||p.ovr)-ref,-12,10);return mu==null?ASW[x.pos]/20*Math.exp((CA[x.pos]||.04)*(d-3)):mu*Math.exp((CA[x.pos]||.04)*(d-3))*(p.am||1)}
+// Experience: a teenager with the same overall as a prime-age player still gets fewer goals and assists (strength, positioning, composure),
+// and a player in his statistical prime gets a few more than his ability alone says.
+// Only applied to simulated shares; a real player's measured share (p.gs / p.asr) already reflects his own record.
+const YTHF=a=>a>=22?1:a>=21?.97:a>=20?.93:a>=19?.89:a>=18?.84:a>=17?.78:.72;
+// output multiplier: the teenage ramp, times output relative to ability at this age (see outRatio: later for IQ-based players)
+const statF=p=>{if(p.age==null||!p.pos)return 1;if(p._sfa!==p.age){p._sfa=p.age;p._sf=YTHF(p.age)*clamp(outRatio(p,p.age),.85,1.15)}return p._sf};
+function gshare(x,ref){const p=x.p;if(p.gs!=null)return p.gs;const mu=PRI.g[x.pos],d=clamp((p.sc||p.ovr)-ref,-12,10),y=statF(p);return mu==null?(x.pos==='GK'?0:SCW[x.pos]/23.4*Math.exp((CG[x.pos]||.04)*(d-6))*y):mu*Math.exp((CG[x.pos]||.04)*(d-6))*(p.gm||1)*y}
+function ashare(x,ref){const p=x.p;if(p.asr!=null)return p.asr;const mu=PRI.a[x.pos],d=clamp((p.ac||p.ovr)-ref,-12,10),y=statF(p);return mu==null?ASW[x.pos]/20*Math.exp((CA[x.pos]||.04)*(d-3))*y:mu*Math.exp((CA[x.pos]||.04)*(d-3))*(p.am||1)*y}
 function allocate(xi,n,g,L){
   const evs=[],cnt=new Map(),st=xi.filter(x=>!x.sub),ref=st.reduce((s,x)=>s+x.p.ovr,0)/st.length;
   for(let i=0;i<n;i++){
@@ -96,10 +102,10 @@ function genStats(me,min,gl,as,gf,ga,lt,lo,gm,pl,poss,act,gcOn){
   const pos=me.pos,A=me.attr,P=PROF[pos],AX=archOf(me);
   if(!RM){const r=rate(pos,me.ovr,gl,as,gf,ga,0,min);return{min,g:gl,a:as,ga,sh:gl,sot:gl,kp:as,pa:0,pc:0,tk:0,ic:0,dr:0,sv:0,rating:r}}
   // effective quality per stat: the relevant attribute measured against the position's profile (what an average player of this overall would have)
-  const q=s=>{const k=pos==='GK'?(GATT[s]||'pos'):SATT[s];const a=A[k];if(a==null)return me.ovr;return me.ovr+(a-((P[k]||0)+me.ovr))};
+  const q=s=>{const k=pos==='GK'?(GATT[s]||'pos'):SATT[s];let a=A[k];if(a==null)return me.ovr;if(pos!=='GK')a+=subAdj(me,s);return me.ovr+(a-((P[k]||0)+me.ovr))};
   const f=simLine(gm,pos,min,gl,as,gf,ga,poss==null?.5:poss,lo/1.35,q,AX.ex,AX.vol,pl&&pl.red,gcOn);
   const s={min:act||min,reg:min,g:gl,a:as,ga,sh:f.shoff+f.sotng+gl,sot:f.sotng+gl,kp:f.kpx+as,pa:f.pas,pc:f.pas-f.pmiss,tk:f.tk,ic:f.ic,dr:f.drs,dra:f.drs+f.drf,bl:f.bl,du:f.duw+f.dul,duw:f.duw,past:f.past,fd:f.fd,fc:f.fc,sv:f.sv,yc:f.yc};
-  s.rating=clamp(Math.round((ratingOf(pos,f,gm)+(AX.ro||0)*(min>=60?1:min/60))*10)/10,3,10);s.f=f;return s;
+  s.rating=clamp(Math.round(tailR(ratingRaw(pos,f,gm)+(AX.ro||0)*(min>=60?1:min/60))*10)/10,3,10);s.f=f;s.bd=breakdown(pos,f,s.rating);return s;
 }
 // Simulated team stats around a result: possession from midfield strength, shots and corners from expected goals
 function teamStats(lh,la,sh,sa,hg,ag,g,p0){

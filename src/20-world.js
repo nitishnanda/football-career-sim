@@ -1,8 +1,69 @@
 let ST=null;
 const SQ=[['GK',2],['CB',4],['FB',4],['DM',2],['CM',3],['AM',2],['W',4],['ST',3]];
 const NSL={GK:1,CB:2,FB:2,DM:1,CM:1,AM:1,W:2,ST:1};
-const fAge=a=>F[clamp(Math.round(a),7,43)-7];
-const ovrAt=(pa,age,dv)=>clamp(Math.round(pa*fAge(age)+dv),25,98);
+/* Four peaks. Ability is built from three components that age differently, each with its own curve (all share the climb to 21, F):
+     physical   stamina, strength, jumping, pace: peaks early (about 23-25), fades from the late 20s
+     technical  first touch, dribbling, skills, finishing and passing technique: peaks mid-to-late 20s, fades slowly
+     IQ         decisions, positioning, shot selection, pass quality: keeps rising into the 30s and fades last
+   An archetype is a mix of the three (MIXA; positions have a default, MIXP, used for generated players), so a pace-based winger peaks
+   early and a deep-lying playmaker late. The mixes were fitted so the statistical peak of each archetype matches the median peak age of its
+   real example players (see data/ref_careers.txt and scripts/fit_peaks.py). Statistical peak is not a fourth curve: it is the same three
+   components weighted toward what produces numbers (technique and especially IQ, less raw athleticism, SMUL), so goal and assist share
+   follows it. Each player also has personal shifts (pks, tks, iqs: years) so some peak early and some late; they are blended in from age 21 to 27. */
+function mkComp(pk,pw,a,b){
+  const c=F.slice(),f21=F[14];let loss=0,i=0;
+  for(let age=22;age<=43;age++){
+    if(age<pk){const t=(age-21)/(pk-21);c[age-7]=f21+(1-f21)*(1-(1-t)*(1-t))}
+    else if(age<=pk+pw)c[age-7]=1;
+    else{loss+=Math.min(.04,a+b*i++);c[age-7]=Math.max(.3,1-loss)}   // a component never loses more than 4% of its peak in a year
+  }
+  return c;
+}
+const COMPS=[mkComp(23,2,.010,.006),mkComp(26,3,.004,.003),mkComp(30,4,.004,.002)],SMUL=[.6,1,1.5],CNAME=['Physical','Technical','IQ'];
+const MIXP={ST:[0.35,0.53,0.11],W:[0.32,0.52,0.15],AM:[0.16,0.61,0.23],CM:[0.25,0.40,0.35],DM:[0.26,0.26,0.48],FB:[0.38,0.25,0.37],CB:[0.39,0.09,0.52],GK:[0.30,0.30,0.40]};
+const MIXA={"ST|Poacher":[.40,.50,.10],"ST|Playmaking Forward":[.25,.60,.15],"ST|Target Man":[.05,.65,.30],"ST|Complete Forward":[.35,.55,.10],"W|Inside Forward":[.35,.50,.15],"W|Traditional Winger":[.40,.55,.05],"W|Flashy Winger":[.40,.55,.05],"W|Pace Abuser":[.80,.20,0],"AM|Classic No.10":[.25,.65,.10],"AM|Shadow Striker":[.40,.55,.05],"AM|Dribbling Ten":[.70,.30,0],"CM|Deep-Lying Playmaker":[0,.20,.80],"CM|Box-to-Box":[.50,.30,.20],"CM|Advanced Creator":[.35,.35,.30],"DM|Anchor":[.25,.25,.50],"DM|Ball Winner":[.50,.30,.20],"DM|Regista":[.15,.30,.55],"FB|Attacking Wing-Back":[.40,.25,.35],"FB|Inverted Full-Back":[.55,.20,.25],"FB|Defensive Full-Back":[.40,.25,.35],"CB|Stopper":[.20,.10,.70],"CB|Ball-Playing Defender":[.20,.10,.70],"CB|Recovery Defender":[.85,.05,.10],"GK|Shot-Stopper":[.15,.35,.50],"GK|Sweeper Keeper":[.15,.35,.50]};
+// an archetype belongs to one position, but a player can be filed in another (Mbappé as a striker with a winger's pace game): its mix still applies
+const ARCHPOS={};for(const p in ARX)for(const a in ARX[p])ARCHPOS[a]=p;
+const mixOf=(pos,arch)=>MIXA[pos+'|'+arch]||MIXA[(ARCHPOS[arch]||'')+'|'+arch]||MIXP[pos]||[.33,.34,.33];
+// a component's value at an age, with a personal shift blended in between 21 and 27 (teenage development is untouched)
+function compAt(ci,a,sh){a=clamp(a,7,43);if(sh)a=clamp(a-sh*clamp((a-21)/6,0,1),7,43);const T=COMPS[ci],i=Math.floor(a),f=a-i;return f?T[i-7]*(1-f)+T[Math.min(36,i-6)]*f:T[i-7]}
+const _mx={};
+function blendMax(w){const k=w.join();if(_mx[k]!=null)return _mx[k];let m=0;for(let a=21;a<=43;a++){let r=0;for(let c=0;c<3;c++)r+=w[c]*COMPS[c][a-7];if(r>m)m=r}return _mx[k]=m}
+// share of peak ability (or output, with sm=SMUL) at an age for a mix w and personal shifts sh=[physical,technical,iq]
+function curveAt(w,a,sh,sm){
+  if(sm)w=norm3(w.map((x,i)=>x*sm[i]));
+  let r=0;for(let c=0;c<3;c++)r+=w[c]*compAt(c,a,sh&&sh[c]);
+  const f21=F[14],mx=blendMax(w);return r<=f21?r:f21+(r-f21)/(mx-f21)*(1-f21);
+}
+const norm3=w=>{const s=w[0]+w[1]+w[2];return[w[0]/s,w[1]/s,w[2]/s]};
+const pkShiftOf=n=>{const h=hashStr('pks|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*5.5*10)/10};
+const tkShiftOf=n=>{const h=hashStr('tks|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*5.5*10)/10};
+const iqShiftOf=n=>{const h=hashStr('iqs|'+n);return Math.round(((h%1000)/1000+((h>>>10)%1000)/1000-1)*8*10)/10};
+// a player's personal shifts, assigned from his name the first time they are needed
+function shiftsOf(p){if(p.pks==null)p.pks=pkShiftOf(p.n||'');if(p.tks==null)p.tks=tkShiftOf(p.n||'');if(p.iqs==null)p.iqs=iqShiftOf(p.n||'');return[p.pks,p.tks,p.iqs]}
+// share of peak ability: pos/arch pick the mix; sh the personal shifts (omit both for the shared climb only)
+function fAge(a,pos,arch,sh){if(!pos)return F[clamp(Math.round(a),7,43)-7];return curveAt(mixOf(pos,arch),a,sh)}
+const fOf=(p,a)=>fAge(a,p.pos,p.arch,shiftsOf(p));
+// output relative to ability: how much more (or less) a player produces than his ability alone says, at his age
+function outRatio(p,a){const w=mixOf(p.pos,p.arch),sh=shiftsOf(p);return curveAt(w,a,sh,SMUL)/curveAt(w,a,sh)}
+const ovrAt=(pa,age,dv,p)=>clamp(Math.round(pa*fOf(p,age)+dv),25,98);
+/* Attribute-level aging. Each attribute follows its own mix of the three components, so pace and strength fade first while passing,
+   positioning and shot selection hold up. attrAging gives each attribute's offset, in rating points, against what the player's overall
+   curve alone would say (zero up to 21, where all components are the same curve). refresh() adds it before re-centring, so the overall
+   rating is untouched: a 33-year-old winger loses pace and keeps his passing, he does not lose points of overall twice. */
+const ATTC={pac:[1,0,0],phy:[1,0,0],dri:[.35,.65,0],sho:[0,.65,.35],pas:[0,.5,.5],def:[.45,0,.55],div:[.6,.4,0],han:[0,1,0],kic:[0,.5,.5],ref:[1,0,0],pos:[0,0,1]};
+// goalkeepers keep group-level attributes (reflexes, diving, handling, kicking, positioning): their ageing, by component
+function gkAging(me,keys){
+  const sh=shiftsOf(me),w=mixOf(me.pos,me.arch),a=me.age,o={};
+  let raw=0;for(let c=0;c<3;c++)raw+=w[c]*compAt(c,a,sh[c]);
+  for(const k of keys){const m=ATTC[k]||[.33,.34,.33];let s=0;for(let c=0;c<3;c++)s+=m[c]*compAt(c,a,sh[c]);o[k]=me.base*(s/raw-1)}
+  return o;
+}
+// peak windows for the tile: the years each component is within 1% of its best, and the years output is within 1% of its best
+function peakWindows(p){
+  const sh=shiftsOf(p),w=mixOf(p.pos,p.arch),win=fn=>{let m=0;for(let a=16;a<=43;a++)m=Math.max(m,fn(a));let lo=null,hi=null;for(let a=16;a<=43;a++)if(fn(a)>=m*.99){if(lo==null)lo=a;hi=a}return[lo,hi]};
+  return{ph:win(a=>compAt(0,a,sh[0])),te:win(a=>compAt(1,a,sh[1])),iq:win(a=>compAt(2,a,sh[2])),st:win(a=>curveAt(w,a,sh,SMUL)),ab:win(a=>curveAt(w,a,sh))};
+}
 const club=id=>ST.W.clubs[id];
 const poolOf=n=>(NATS.find(x=>x[0]===n)||NATS[0])[1];
 
@@ -20,7 +81,8 @@ function addPlayer(g,c,pos,ovr,age,pa,real){
     for(let t=0;nm.has(n)&&t<14;t++)n=g.pick(pl[0])+' '+g.pick(pl[1]);
     if(nm.has(n))n+=' '+String.fromCharCode(65+g.int(0,25))+'.';
     nm.add(n)}
-  const p={id,n,nat,pos,age,pa:Math.round((pa||ovr/fAge(age))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age))):ovr};   // pk: best rating reached (estimated for veterans at the start)
+  const sh=[pkShiftOf(n),tkShiftOf(n),iqShiftOf(n)],p={id,n,nat,pos,age,pks:sh[0],tks:sh[1],iqs:sh[2],pa:Math.round((pa||ovr/fAge(age,pos,null,sh))*10)/10,dv:0,ovr,cl:c.id,g:0,a:0,ap:0,rs:0,eg:0,cs:0,pk:age>=29?Math.min(ovr+12,Math.round(ovr/fAge(age,pos,null,sh))):ovr};   // pk: best rating reached (estimated for veterans at the start)
+  if(SIDED[pos])p.sd=(real&&real.sd)||pickSide(c,n,pos);
   if(real&&real.fl)p.fl=1;
   if(!real)p.fk=1;   // made-up regen or signing: not a real player
   if(real&&real.gs!=null){p.gs=real.gs;p.asr=real.asr;p.pf=real.pf}
@@ -33,7 +95,7 @@ const SQT={1:26,2:25,3:24,4:23};   // first-team squad sizes clubs keep (real to
 function newArrival(g,c,pos){
   if(g.chance(.45)){   // academy graduate or young signing: potential spread around the club's level, rarely world class
     const pa=clamp(c.base-2+g.norm(0,6),45,94),age=g.int(17,19);   // academy graduates: mostly squad-level, the odd gem
-    addPlayer(g,c,pos,Math.round(pa*fAge(age)),age,pa);
+    addPlayer(g,c,pos,Math.round(pa*fAge(age,pos)),age,pa);
   }else{
     const ovr=c.base-4+g.norm(0,4)+(g.chance(.08)?g.int(3,6):0);       // squad signings come in below the starters
     addPlayer(g,c,pos,Math.round(clamp(ovr,38,93)),g.int(22,29));
@@ -49,15 +111,54 @@ function fillSquad(g,c){
   }
 }
 
+/* Position corrections for the 2026 snapshot, whose generic "Midfielder"/"Attacker" labels file some wingers as central midfielders or strikers and some
+   attacking midfielders as central ones. Only players whose real role is clear (applied to the snapshot, not the 2013-2025 squads, which are labelled correctly). */
+const POSFIX={'Vinícius Júnior':'W','Raphinha':'W','Bradley Barcola':'W','Igor Paixão':'W','Noni Madueke':'W','Kenan Yıldız':'W','Désiré Doué':'W','Jamie Leweling':'W','Iñaki Williams':'W','Giuliano Simeone':'W','Martin Ødegaard':'AM','Phil Foden':'AM','Álex Baena':'AM','Hakan Çalhanoğlu':'DM','Jurriën Timber':'FB','Maximilian Beier':'ST'};
+let _PF=null;
+const posFix=(n,pos)=>{if(!_PF){_PF={};for(const k in POSFIX)_PF[norm0(k)]=POSFIX[k]}return _PF[norm0(n||'')]||pos};
+const hasPosFix=n=>{posFix('');return _PF[norm0(n||'')]!==undefined};   // a corrected position is not re-shuffled by the squad-balance rule
+/* Wingers and full-backs have a side. The engine plays them all as 'W' / 'FB'; sd ('L' or 'R') decides how they are named (LW / RW, LB / RB) and
+   which flank they are drawn on. Known players have their real side; the others are split so a squad's top two wingers (and top two full-backs)
+   are one of each. */
+const SIDED={W:1,FB:1};
+const plab=p=>SIDED[p.pos]&&p.sd?(p.sd==='L'?'L':'R')+p.pos.slice(-1)+'':p.pos==='W'?'W':p.pos;
+const pname=p=>p.pos==='W'?(p.sd==='L'?'Left winger':p.sd==='R'?'Right winger':'Winger'):p.pos==='FB'?(p.sd==='L'?'Left-back':p.sd==='R'?'Right-back':'Full-back'):POSN[p.pos];
+const WSIDE_L="Vinícius Júnior,Rafael Leão,Khvicha Kvaratskhelia,Neymar,Son Heung-min,Luis Díaz,Alejandro Garnacho,Jérémy Doku,Raheem Sterling,Jack Grealish,Marcus Rashford,Anthony Gordon,Cody Gakpo,Nico Williams,Allan Saint-Maximin,Kingsley Coman,Ryan Giggs,Ronaldinho,Lorenzo Insigne,Callum Hudson-Odoi,Bradley Barcola,Kenan Yıldız,Igor Paixão,Mykhailo Mudryk,Jadon Sancho,Christos Tzolis,Eden Hazard,Franck Ribéry,Jack Harrison,Wilfried Zaha,"
+ +"Nuno Mendes,Alphonso Davies,Theo Hernández,Alejandro Grimaldo,Marc Cucurella,Federico Dimarco,Riccardo Calafiori,Andrew Robertson,Marcelo,Roberto Carlos,Paolo Maldini,Oleksandr Zinchenko,Alejandro Balde,Milos Kerkez,Lewis Hall,Antonee Robinson,Ben Chilwell,Luke Shaw,Ferland Mendy,Rayan Aït-Nouri,Nico O'Reilly,Álvaro Carreras,Adrien Truffert,Tyrick Mitchell,Vitaliy Mykolenko,Nathaniel Brown,Maximilian Mittelstädt,Jordi Alba";
+const WSIDE_R="Mohamed Salah,Bukayo Saka,Lamine Yamal,Michael Olise,Bryan Mbeumo,Antoine Semenyo,Jarrod Bowen,Raphinha,Riyad Mahrez,Ángel Di María,Arjen Robben,Luís Figo,Theo Walcott,Daniel James,Adama Traoré,Rodrygo,Estêvão Willian,Noni Madueke,Christian Pulisic,Ismaïla Sarr,Pedro Neto,Mohammed Kudus,Antony,Amad Diallo,Savinho,Désiré Doué,Serge Gnabry,Leroy Sané,Gareth Bale,Ousmane Dembélé,Giuliano Simeone,Kevin Schade,"
+ +"Achraf Hakimi,Trent Alexander-Arnold,Reece James,Pedro Porro,Jeremie Frimpong,Diogo Dalot,Kyle Walker,Dani Carvajal,Dani Alves,Philipp Lahm,João Cancelo,Jurriën Timber,Tino Livramento,Matheus Nunes,Joško Stanišić,Josip Stanišić,Jules Koundé,Malo Gusto,Matty Cash,Neco Williams,Ben White,Benjamin Pavard,Rico Lewis,Michael Kayode,Julian Ryerson,Pierre Kalulu,Andrea Cambiaso,Giovanni Di Lorenzo,Marcos Llorente,Jonathan Clauss";
+let _WS=null;
+function knownSide(n){if(!_WS){_WS={};for(const x of WSIDE_L.split(','))_WS[norm0(x)]='L';for(const x of WSIDE_R.split(','))_WS[norm0(x)]='R'}return _WS[norm0(n||'')]}
+const sideHash=n=>hashStr('side|'+n)%2?'L':'R';
+// a new winger / full-back joins the flank the club has fewer of
+function pickSide(c,n,pos){const k=knownSide(n);if(k)return k;let l=0,r=0;for(const id of c.sq){const q=ST.W.pl[id];if(q&&q.pos===pos){if(q.sd==='L')l++;else if(q.sd==='R')r++}}return l<r?'L':r<l?'R':sideHash(n)}
+// sides for one squad's players of a position, listed best first: real sides stand, the rest fill the thinner flank in order
+function assignSides(arr){
+  const m=new Map();let l=0,r=0;
+  for(const x of arr){const k=x.conv?null:knownSide(x.n);if(k){m.set(x,k);if(k==='L')l++;else r++}}
+  arr.forEach((x,i)=>{
+    if(m.has(x))return;
+    // a starter takes the opposite flank to the other starter if that one is settled; otherwise the thinner flank
+    const o=i<2?m.get(arr[1-i]):null,s=o?(o==='L'?'R':'L'):l<r?'L':r<l?'R':sideHash(x.n);
+    m.set(x,s);if(s==='L')l++;else r++;
+  });
+  return m;
+}
+/* Players stay in the position the data gives them. When a squad is short somewhere, a player may only be moved there if he is genuinely listed at two
+   positions (POSALT, from club sites), or if the data only calls him a "CM" (its generic midfielder label), which can be an AM or DM. Anything else is
+   filled with a generated player instead of turning, say, a winger into a full-back. */
+const POSALT={'Ben White':['FB'],'Jurriën Timber':['CB'],'Trent Alexander-Arnold':['CM'],'Joshua Kimmich':['FB','CM'],'João Cancelo':['FB'],'Kyle Walker':['CB'],'Reece James':['CM'],'Rico Lewis':['CM'],'Oleksandr Zinchenko':['CM'],"Nico O'Reilly":['W'],'Marc Cucurella':['CB'],'Alphonso Davies':['W'],'Jeremie Frimpong':['W'],'Lewis Hall':['CM'],'Matheus Nunes':['CM'],'Rayan Aït-Nouri':['W'],'Declan Rice':['DM'],'Martin Ødegaard':['CM'],'Bernardo Silva':['W','AM'],'Phil Foden':['W'],'Kai Havertz':['ST'],'Julián Álvarez':['AM'],'Marcus Thuram':['W'],'Kylian Mbappé':['W'],'Ousmane Dembélé':['ST'],'Gabriel Jesus':['W'],'Eberechi Eze':['W'],'Ryan Gravenberch':['CM'],'Martín Zubimendi':['CM'],'Aurélien Tchouaméni':['CB'],'Eduardo Camavinga':['FB'],'Federico Valverde':['FB','W'],'Jules Koundé':['FB'],'Cole Palmer':['W'],'Alexis Mac Allister':['DM'],'Moisés Caicedo':['DM'],'Enzo Fernández':['DM'],'Sandro Tonali':['DM'],'Bruno Guimarães':['DM'],'Rodri':['CM'],'Pedri':['AM'],'Florian Wirtz':['W'],'Jamal Musiala':['W'],'Luis Díaz':['ST'],'Bryan Mbeumo':['ST']};
+let _PA=null;
+const canSwitch=(x,pos)=>{if(x.pos==='CM'&&(pos==='AM'||pos==='DM'))return true;if(!_PA){_PA={};for(const k in POSALT)_PA[norm0(k)]=POSALT[k]}const a=_PA[norm0(x.n||'')];return!!a&&a.includes(pos)};
 // real squad -> ratings. Order within a position by caps, squad number and age; ratings hang off club strength.
 function addReal(g,c,list){
-  const L=list.map(([t,d,pos,by,nat,caps,no,v,m,pid,gs,asr,pf,evm])=>({gs,asr,pf,evm:evm||0,n:t.replace(/\s*\(.*\)$/,''),pos,age:clamp(ST.season-by,16,42),nat:nat==='United States'?'USA':(nat||LGN[c.lg].nat),caps,v:v||0,m:m||0,q:caps+(v||0)*2+(m||0)/20+(no>0&&no<=11?12:no>0&&no<=25?6:0)}));
+  const L=list.map(([t,d,pos,by,nat,caps,no,v,m,pid,gs,asr,pf,evm])=>({gs,asr,pf,evm:evm||0,fx:pid!==0&&hasPosFix(t.replace(/\s*\(.*\)$/,'')),n:t.replace(/\s*\(.*\)$/,''),pos:pid!==0?posFix(t.replace(/\s*\(.*\)$/,''),pos):pos,age:clamp(ST.season-by,16,42),nat:nat==='United States'?'USA':(nat||LGN[c.lg].nat),caps,v:v||0,m:m||0,q:caps+(v||0)*2+(m||0)/20+(no>0&&no<=11?12:no>0&&no<=25?6:0)}));
   L.forEach(x=>{if(x.age>=24&&x.age<=31)x.q+=4});
   const cov=L.filter(x=>x.v>0).length/L.length;
   const cnt=p=>L.filter(x=>x.pos===p).length;
-  for(const pos in NSL)while(cnt(pos)<NSL[pos]){const dn=DON[pos].find(d=>cnt(d)>NSL[d]);if(!dn)break;L.filter(x=>x.pos===dn).sort((a,b)=>a.q-b.q)[0].pos=pos}
+  for(const pos in NSL)while(cnt(pos)<NSL[pos]){let cv=null;for(const d of DON[pos]){if(cnt(d)<=NSL[d])continue;cv=L.filter(x=>x.pos===d&&!x.fx&&canSwitch(x,pos)).sort((a,b)=>a.q-b.q)[0];if(cv)break}if(!cv)break;cv.pos=pos;cv.conv=1}   // a converted player takes whichever flank the squad lacks
   for(const pos in NSL){
-    const arr=L.filter(x=>x.pos===pos).sort((a,b)=>b.q-a.q),k=NSL[pos];
+    const arr=L.filter(x=>x.pos===pos).sort((a,b)=>b.q-a.q),k=NSL[pos],made=[];
     arr.forEach((x,r)=>{
       const bump=x.caps>=80?5:x.caps>=50?3.5:x.caps>=25?2:x.caps>=10?1:0;
       let ovr=r<k?c.base+g.norm(0,3.2)+bump:c.base-4-2*Math.min(r-k,4)+g.norm(0,3)+bump*.5;
@@ -70,10 +171,12 @@ function addReal(g,c,list){
       ovr=Math.round(clamp(ovr,38,95));
       // potential: young players only keep the nominal growth if their real performances back it up
       let pa,gm;
-      if(x.age<24){const rel=x.evm/(x.evm+600);gm=clamp(.8+.3*(x.pf||0)*rel-(x.evm<300?.1:0),.3,1.2);pa=Math.min(96,ovr/fAge(x.age))}
-      addPlayer(g,c,pos,ovr,x.age,pa,{n:x.n,nat:x.nat,gs:x.gs,asr:x.asr,pf:x.pf,gm});
+      if(x.age<24){const rel=x.evm/(x.evm+600);gm=clamp(.8+.3*(x.pf||0)*rel-(x.evm<300?.1:0),.3,1.2);pa=Math.min(96,ovr/fAge(x.age,pos,null,[pkShiftOf(x.n),tkShiftOf(x.n),iqShiftOf(x.n)]))}
+      made.push({p:addPlayer(g,c,pos,ovr,x.age,pa,{n:x.n,nat:x.nat,gs:x.gs,asr:x.asr,pf:x.pf,gm}),n:x.n,conv:x.conv});
     });
-    for(let r=arr.length;r<k;r++){c.fln=(c.fln||0)+1;addPlayer(g,c,pos,Math.round(c.base-6),26,undefined,{n:c.name+' reserve '+c.fln,nat:LGN[c.lg].nat,fl:1})}
+    // sides are settled once ratings are known, so the two players who start are one on each flank where possible
+    if(SIDED[pos]){const it=made.sort((a,b)=>b.p.ovr-a.p.ovr),m=assignSides(it);for(const o of it)o.p.sd=m.get(o)}
+    for(let r=arr.length;r<k;r++)addPlayer(g,c,pos,Math.round(c.base-6+g.norm(0,2)),g.int(21,30));   // a gap in the real squad: a generated player
   }
 }
 
@@ -163,7 +266,7 @@ function rollWorld(){
     c._bp=null;
     for(const id of c.sq.slice()){
       const p=W.pl[id],dvN=clamp(p.dv*.75+g.norm(0,1.5),-8,8),o0=p.o0!=null?p.o0:p.ovr;
-      p.age++;p.dv=dvN;const nom=ovrAt(p.pa,p.age,dvN);
+      p.age++;p.dv=dvN;const nom=ovrAt(p.pa,p.age,dvN,p);
       p.ovr=p.gm!=null&&p.age<=25&&nom>o0?Math.round(o0+p.gm*(nom-o0)):nom;p.o0=p.ovr;delete p.ovf;p.pk=Math.max(p.pk||p.ovr,p.ovr);
       if(p.age>=43||(p.age>=34&&g.chance((p.age-33)*.17))){p.cl=-1;W.free.push(id);c.sq=c.sq.filter(x=>x!==id)}
     }

@@ -25,7 +25,7 @@ function moveAI(p,from,to,fee,free){
   p.wg=wageFor(to,wageVal(p.ovr,p.age,p.pa,to,p.pk));p.ce=ST.season+1+(p.age>=31?1:2)+((p.id*7)%3);
   const me=ST.me,mine=me.cl===to.id||me.cl===from.id;
   if(fee>=25||mine||(p.ovr>=84))newsTr(`${p.n} joins ${to.name} from ${from.name}${free?' on a free':' for '+fmtM(fee)}`);
-  if(mine)addMsg('club',me.cl===to.id?'New signing: '+p.n:'Departure: '+p.n,me.cl===to.id?`${to.name} have signed ${p.n} (${p.pos}, ${p.age}) from ${from.name}${free?' on a free transfer':' for '+fmtM(fee)}.${p.pos===me.pos?' He plays in your position.':''}`:`${p.n} has left for ${to.name}${free?' on a free':' for '+fmtM(fee)}.${p.pos===me.pos?' One less player ahead of you for a place.':''}`);
+  if(mine)addMsg('club',me.cl===to.id?'New signing: '+p.n:'Departure: '+p.n,me.cl===to.id?`${to.name} have signed ${p.n} (${plab(p)}, ${p.age}) from ${from.name}${free?' on a free transfer':' for '+fmtM(fee)}.${p.pos===me.pos?' He plays in your position.':''}`:`${p.n} has left for ${to.name}${free?' on a free':' for '+fmtM(fee)}.${p.pos===me.pos?' One less player ahead of you for a place.':''}`);
 }
 // Summer window: each club looks at its first-choice places, and where a starter is well below the club's level (or old),
 // it buys a better player from a weaker club it can afford. Richest clubs shop first; weaker clubs then replace who they lost.

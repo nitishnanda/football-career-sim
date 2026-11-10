@@ -1,5 +1,11 @@
 /* Season page (hero + match report + dashboard cards) and header, per the UI guide. */
-let DT='games';
+let DT='games',TRG=null;
+// training focus picker: six groups, then the sub-attributes of the selected one (goalkeepers keep their six)
+function trainRow(me){
+  if(me.pos==='GK'||!me.sub)return seg(keysOf(me).map(k=>[k,KL[k]]),me.focus||keysOf(me)[0],'focus');
+  const g=TRG||(me.focus&&SUBG[me.focus])||'sho';
+  return seg(GROUPS.map(([k])=>[k,KL[k]]),g,'trg')+'<div style="margin-top:8px">'+seg(GROUPS.find(x=>x[0]===g)[1].map(j=>[j,SL[j]]),me.focus,'focus')+'</div>';
+}
 const lspark=(v,w,h)=>{
   if(v.length<2)return'';const lo=Math.min(...v),hi=Math.max(...v),r=hi-lo||1,x=i=>i/(v.length-1)*(w-8)+4,y=a=>h-5-(a-lo)/r*(h-10);
   return`<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="${v.map((a,i)=>x(i).toFixed(1)+','+y(a).toFixed(1)).join(' ')}"/></svg>`;
@@ -11,7 +17,7 @@ function vTop(){
   const me=ST.me,inj=me.inj>0;
   return`<header class="top"><div class="brand"><span class="logo">⚽</span><div><b>FOOTBALL CAREER SIM</b>${kk('Pro circuit')}</div></div>
   <nav class="nav">${tabBtns()}</nav>
-  <div class="hr"><div class="info"><b>OVR ${me.ovr} · ${esc(String(me.tier).toUpperCase())}</b>${kk(`Age ${me.age} · ${me.pos} · ${inj?'Injured '+me.inj+'w':'Fitness '+cond()+'%'}`)}</div>
+  <div class="hr"><div class="info"><b>OVR ${me.ovr} · ${esc(String(me.tier).toUpperCase())}</b>${kk(`Age ${me.age} · ${plab(me)} · ${inj?'Injured '+me.inj+'w':'Fitness '+cond()+'%'}`)}</div>
   <div class="sv ${SAVEOK?'':'off'}" title="${SAVEOK?'Autosave is on':'Saving is blocked'}"><span>${SAVEOK?(SAVET?'Saved':'Autosave'):'Not saving'}</span></div>
   <button class="srchbtn" data-a="srch" title="Search players and clubs ( / )" style="margin-left:0"><span>⌕</span><em>Search</em><kbd>/</kbd></button>
   <button class="ico gear" data-a="gear" title="Settings">⚙</button><button class="btn sm red" data-a="reset">New</button><button class="ico av" data-a="tab" data-v="career" title="Career">${ab(me.name).slice(0,2)}</button></div></header>`;
@@ -47,11 +53,11 @@ function vSeasonHero(){
   return G('shero',`<div class="k" style="font-size:13px;letter-spacing:.14em">${label(ST.season)} season</div>
   <div class="pills" style="margin-top:8px"><span class="pill live">Live campaign</span><span class="pill">${me.role==='youth'?'U18 League':esc(l.n)+' · '+ord(pos)}</span><span class="pill">Next: ${nx}</span></div>
   <div class="nm">${esc(me.name)}</div>
-  <div class="idl">${esc(club(me.cl).name)} · ${POSN[me.pos]} · ${me.ht} cm · ${esc(archName(me))}${me.role==='youth'?' · Academy':''}</div>
+  <div class="idl">${esc(club(me.cl).name)} · ${pname(me)} · ${me.ht} cm · ${esc(archName(me))}${me.role==='youth'?' · Academy':''}</div>
   <div class="rec"><span class="no">#${shirt(me)}</span><div class="box">${kk(rc2)}<b>${t.w}-${t.d}-${t.l}</b>${kk(t.p+' pts · '+(t.gf-t.ga>0?'+':'')+(t.gf-t.ga)+' GD')}</div>${avgBox}${lastBox}</div>
   ${fm?`<div class="fchips">${kk('Form')} ${fm}</div>`:''}
   <div style="margin-top:14px"><div class="prog"><span>${lbl}</span><span>Matchday ${pl} / ${md} · ${pct}%</span></div><div class="track"><i style="width:${pct}%"></i></div></div>
-  <div style="margin-top:12px">${kk('Training focus · switch any time')}<div style="margin-top:8px">${seg(keysOf(me).map(k=>[k,KL[k]]),f,'focus')}</div><div class="m" style="margin-top:8px">${esc(DIR[f]||'')}</div></div>
+  <div style="margin-top:12px">${kk('Training focus · switch any time')}<div style="margin-top:8px">${trainRow(me)}</div><div class="m" style="margin-top:8px">${esc(me.focus?fLabel(me.focus)+': '+fDir(me.focus):'Pick what to work on this season')}</div></div>
   <div class="actbar"><button class="btn xl" data-a="next">▶ Sim next match</button><button class="btn alt" data-a="blk">⏭ Sim to review</button><button class="btn alt sm" data-a="chunk" data-n="3">Sim 3</button><button class="btn alt sm" data-a="chunk" data-n="10">Sim 10</button><button class="btn alt sm" data-a="ssn">Skip season »</button></div>
   ${me.inj>0?`<div class="warn">Injured: about ${me.inj} more matchday${me.inj>1?'s':''} out.</div>`:''}${ST.note?`<div class="warn">${esc(ST.note)}</div>`:''}`);
 }
@@ -119,7 +125,7 @@ function vAverages(){
   const avg=rn?rs/rn:0,dl=last&&last.avg&&avg?avg-last.avg:null,arrow=d=>d==null?'':`<span class="dl ${d>=0?'up':'dn'}">${d>=0?'↗ +':'↘ '}${d.toFixed(2)}</span>`;
   const cum=k=>{let c=0;return log.map(l=>c+=l[k]||0)};
   const tile=(k,n,sub,sp,extra,badge)=>`<div class="stile">${kk(k)}${badge||''}<span class="n">${n}${extra||''}</span><span class="m">${sub}</span>${sp||''}</div>`;
-  const kl=keysOf(me),A=me.attr;
+  const kl=keysOf(me),A=me.gd||me.attr;
   return G('pad s6',`${ico('⚽','Season averages','Per match')}<div class="grid2">
   ${tile('Goals',g,ap+' games · '+p90(g)+' per 90',lspark(cum('g'),200,46),last&&last.ap?`<span class="dl m">${last.g} last yr</span>`:'')}
   ${tile('Assists',a,ap+' games · '+p90(a)+' per 90',lspark(cum('a'),200,46),last&&last.ap?`<span class="dl m">${last.a} last yr</span>`:'')}
@@ -160,7 +166,7 @@ function vH2H(){
   const sd=selData(),f2=x=>x==null?'-':x.toFixed(2),rows=sd.rows.slice(0,sd.k+2),m=sd.me,ps=Math.round(sd.ps*100);
   const beat=r=>[m.ovr>r.ovr,(m.avg||0)>(r.avg||0),m.ga>r.ga].filter(Boolean).length;
   const need=sd.margin>=0?`You are ahead of the shirt by ${sd.margin.toFixed(1)} points.`:`You need ${(-sd.margin).toFixed(1)} more selection points to win a starting place.`;
-  return G('pad s12',`${ico('⚔','Competition for my place',POSN[me.pos])}
+  return G('pad s12',`${ico('⚔','Competition for my place',pname(me))}
   <div class="grid2" style="grid-template-columns:repeat(3,1fr)"><div class="tile">${kk('Chance to start')}<b class="n">${ps}%</b></div><div class="tile">${kk('Minutes per game')}<b class="n">${m.ap?Math.round(m.mn/m.ap):0}</b></div><div class="tile">${kk('Starts / games played')}<b class="n">${m.st}/${m.ap}</b></div></div>
   <div class="quote mt"><b>${need}</b><br><span class="m">The manager picks on form as well as ability: ${ST.me.role==='starter'?'you are first choice':ST.me.role==='rotation'?'you are in the rotation':'you are on the bench'}. A better average rating or more goal involvements than the player in front wins you minutes.</span></div>
   <div style="overflow-x:auto" class="mt"><table class="tb"><tr><th>Player</th><th class="r">Age</th><th class="r">OVR</th><th class="r">Avg rating</th><th class="r">G+A / game</th><th class="r">Apps</th><th class="r">Sel.</th><th class="r">You win</th></tr>
@@ -171,7 +177,7 @@ function vH2H(){
 const DTABS=[['games','⚽ Games'],['stats','📊 Stats'],['squad','⚔ My place'],['league','🌎 League'],['inbox','📥 Inbox'],['hist','📜 History']];
 function vHome(){
   const u=unread(),dash=seg(DTABS,DT,'dt',{inbox:u});
-  const B={games:()=>vStream()+vAverages(),stats:()=>vShotMap()+vImpact(),squad:()=>vH2H()+vLeaders(),league:()=>vObjective()+vSnap()+vWire(),inbox:()=>`<div class="s12">${vInbox()}</div>`,hist:()=>vWatch()+vHofCard()};
+  const B={games:()=>vStream()+vAverages(),stats:()=>vProfile()+vShotMap()+vImpact(),squad:()=>vH2H()+vLeaders(),league:()=>vObjective()+vSnap()+vWire(),inbox:()=>`<div class="s12">${vInbox()}</div>`,hist:()=>vWatch()+vHofCard()};
   return`<div class="g12"><div class="s12">${vSeasonHero()}</div><div class="s12">${vCalendar()}</div><div class="s12">${vSeasonBdo()}</div><div class="s12">${vMatchCenter()}</div><div class="s12" style="display:flex;justify-content:center;overflow-x:auto">${dash}</div>${(B[DT]||B.games)()}</div>`;
 }
 function vImpact(){
@@ -206,4 +212,36 @@ function vShotMap(){
   return G('pad s12',`${ico('◎','Shot map','Simulated from your season stats')}<div class="row wr" style="justify-content:space-between">${seg([['all','All '+pct(()=>1)],['box','Box '+pct(p=>p.b&&!p.h)],['out','Outside '+pct(p=>!p.b)],['head','Headers '+pct(p=>p.h)]],F,'smf')}<span class="k">${pts.length} shots · ${pts.filter(p=>p.g).length} goals</span></div>
   <div style="max-width:560px;margin:14px auto 0"><svg viewBox="0 0 100 62" style="width:100%;border-radius:18px;background:#0b1a14;border:1px solid rgba(255,255,255,.1)"><g fill="none" stroke="rgba(255,255,255,.28)" stroke-width=".45"><rect x="1" y="1" width="98" height="60"/><rect x="22" y="1" width="56" height="17"/><rect x="38" y="1" width="24" height="6"/><path d="M38 18a12 12 0 0 0 24 0"/><path d="M1 61a8 8 0 0 0 8-8"/><path d="M99 61a8 8 0 0 1-8-8"/></g>${dots}</svg></div>
   <div class="row mt wr" style="justify-content:space-between"><span class="k"><span style="color:#fff">●</span> goal · <span>✕</span> no goal · <span style="color:#ffd166">●</span> last match</span><b class="big" style="font-size:30px">${sel.length?Math.round(mk/sel.length*1000)/10:0}% conversion</b></div>`);
+}
+
+/* ---------- rating breakdown (see 32-breakdown.js) ---------- */
+// a centred bar: green/yellow to the right, orange/red to the left, full width at three typical spreads
+const bkBar=z=>{const w=Math.min(1,Math.abs(z)/3)*50;return`<div class="bkbar"><i class="${bkCls(z)}" style="${z>=0?'left:50%':'right:50%'};width:${w}%"></i></div>`};
+const sgn=v=>(v>=0?'+':'')+v.toFixed(2);
+// one match: the four bars, then how the rating adds up from 6.5
+function vBk(pos,bd,rating){
+  if(!bd)return'';
+  const cats=bkCats(pos),sum=bd.c.reduce((a,b)=>a+b,0);
+  return`<h3 class="mt">Rating breakdown</h3><div class="bkhead"><span class="m sm">Every rating starts at 6.5</span><span class="mono sm">impact on this match</span></div>
+  ${cats.map(([lab],i)=>{const z=bkZg(pos,i,bd.c[i]);return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(z)}</div>`}).join('')}
+  <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.50</b></div><div class="kv"><span>A typical ${esc(POSN[pos].toLowerCase())} match (minutes and involvement)</span><b class="mono">${sgn(bd.t)}</b></div>
+  ${cats.map(([lab],i)=>`<div class="kv"><span>${lab}</span><b class="mono" style="color:var(--${bd.c[i]>=.05?'good':bd.c[i]<=-.05?'badc':'tx'})">${sgn(bd.c[i])}</b></div>`).join('')}
+  <div class="kv"><span>Team result</span><b class="mono">${sgn(bd.x)}</b></div>${bd.s>=.03?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bd.s)}</b></div>`:''}<div class="kv"><span>Style and match feel</span><b class="mono">${sgn(bd.o)}</b></div>
+  <div class="kv"><span><b>Rating</b>${Math.abs(6.5+bd.t+sum+bd.x+(bd.s||0)+bd.o-rating)>.06?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Compared with an average game at your position. Ratings come from a model fitted on 91,000 real player-matches.</div>`;
+}
+// the average game: this role's average impact per category, a colour strip of recent games, and how each role he has played compares
+function vProfile(){
+  const me=ST.me,pos=me.pos,cats=bkCats(pos),cur=(me.bkr||{})[me.arch+'|'+pos],log=(ST.mineLog||[]).filter(l=>l.bd&&l.bd.length===cats.length).slice(-20);
+  if(!cur&&!log.length)return G('pad s12',`${ico('🎨','Your average game','by category')}<div class="m">Play a few matches and this shows what your games are made of: how often shooting, passing, dribbling and defending lift your rating, and how that changes if you reinvent yourself.</div>`);
+  const rows=cats.map(([lab],i)=>{
+    const avg=cur?cur.sum[i]/cur.n:0,z=bkZ(pos,i,avg),gp=cur?Math.round(cur.g[i]/cur.n*100):0,rp=cur?Math.round(cur.r[i]/cur.n*100):0;
+    const strip=log.map(l=>`<i class="${bkCls(bkZg(pos,i,l.bd[i]))}" title="${esc(l.c.split(' · ')[0])} vs ${esc(l.o)}: ${sgn(l.bd[i])}"></i>`).join('');
+    return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(z)}<b class="mono sm" style="width:46px;text-align:right">${sgn(avg)}</b></div>
+    <div class="bkmeta"><div class="bkstrip">${strip}</div><span class="m sm">${gp}% green · ${rp}% below par</span></div>`}).join('');
+  // other roles he has played, newest last
+  const roles=Object.values(me.bkr||{}).filter(o=>o.n>=3&&bkCats(o.pos).length===cats.length);
+  const cmp=roles.length>=2?`<h3 class="mt">How reinventing changed your game</h3><div style="overflow-x:auto"><table class="tb"><tr><th></th>${roles.map(o=>`<th class="r">${esc(o.arch)}<br><span class="m sm">${o.n} games</span></th>`).join('')}<th class="r">Change</th></tr>
+    ${cats.map(([lab],i)=>{const zs=roles.map(o=>bkZ(o.pos,i,o.sum[i]/o.n)),d=zs[zs.length-1]-zs[zs.length-2];
+      return`<tr><td>${lab}</td>${roles.map((o,k)=>`<td class="r"><span class="rb ${bkCls(zs[k])}">${sgn(o.sum[i]/o.n)}</span> <span class="m sm">${Math.round(o.g[i]/o.n*100)}%</span></td>`).join('')}<td class="r"><b style="color:var(--${d>.15?'good':d<-.15?'badc':'tx'})">${d>.15?'▲':d<-.15?'▼':'–'} ${Math.abs(d).toFixed(1)}</b></td></tr>`}).join('')}</table></div><div class="m sm mt">Average impact per game, and the share of games where the category was worth 7.0+ on its own. Change is in typical spreads between your last two roles.</div>`:'';
+  return G('pad s12',`${ico('🎨','Your average game',esc(me.arch)+' · '+(cur?cur.n:0)+' games')}<div class="bkhead"><span class="m sm">Each square is one match, newest on the right</span><span class="mono sm">average impact</span></div>${rows}${cmp}`);
 }

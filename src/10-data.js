@@ -1,4 +1,4 @@
-const VER=13;
+const VER=19;
 const NTOP=5,CO=['England','Spain','Germany','Italy','France'];
 const CUPN={England:'FA Cup',Spain:'Copa del Rey',Germany:'DFB-Pokal',Italy:'Coppa Italia',France:'Coupe de France'};
 // REAL (data/world.json, built from Wikipedia) is injected by the build: divisions, clubs, managers, grounds, players
@@ -23,12 +23,12 @@ const OUTK=['pac','sho','pas','dri','def','phy'],GKK=['div','han','kic','ref','p
 const KL={pac:'Pace',sho:'Shooting',pas:'Passing',dri:'Dribbling',def:'Defending',phy:'Physical',div:'Diving',han:'Handling',kic:'Kicking',ref:'Reflexes',pos:'Positioning'};
 // realistic ceilings per attribute (no gold-card 99s) -- pace is the only one that gets near 99,
 // everything else tops out the way it does on a real top-end base card
-const ACAP={pac:97,sho:94,pas:93,dri:96,def:92,phy:94,div:94,han:93,kic:92,ref:95,pos:93};
+const ACAP={pac:97,sho:94,pas:93,dri:96,def:92,phy:94,div:92,han:92,kic:93,ref:94,pos:92};   // group ceilings; goalkeepers: highest recorded reflexes 94, diving 92, handling 92, kicking 93, positioning 92
 // attribute offsets from the player's overall, per position
 const PROF={
 ST:{pac:0,sho:6,pas:-10,dri:-4,def:-35,phy:0},W:{pac:6,sho:-4,pas:-6,dri:6,def:-35,phy:-8},AM:{pac:-2,sho:-2,pas:6,dri:5,def:-30,phy:-10},
 CM:{pac:-6,sho:-8,pas:6,dri:-2,def:-8,phy:0},DM:{pac:-8,sho:-18,pas:2,dri:-8,def:8,phy:6},FB:{pac:4,sho:-22,pas:-6,dri:-6,def:6,phy:-2},
-CB:{pac:-6,sho:-35,pas:-14,dri:-25,def:12,phy:8},GK:{div:0,han:0,kic:0,ref:0,pos:0,phy:0}};
+CB:{pac:-1,sho:-35,pas:-14,dri:-25,def:12,phy:8},GK:{div:0,han:0,kic:0,ref:0,pos:0,phy:0}};
 // how each attribute weighs into overall, in OUTK / GKK order
 const OVW={ST:[.18,.34,.10,.17,.02,.19],W:[.26,.17,.16,.30,.03,.08],AM:[.10,.20,.32,.28,.03,.07],CM:[.09,.10,.30,.17,.17,.17],DM:[.07,.05,.25,.10,.33,.20],FB:[.24,.04,.16,.14,.26,.16],CB:[.12,.01,.08,.04,.46,.29],GK:[.24,.2,.1,.24,.16,.06]};
 // starting potential: mean and spread of peak overall

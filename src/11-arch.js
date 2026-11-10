@@ -921,7 +921,7 @@ const ARX={
 "Declines earlier"
 ],
 "att": {
-"pac": 9,
+"pac": 6,
 "def": 3,
 "phy": 1,
 "pas": -4
@@ -1026,4 +1026,6 @@ const ARCH={};for(const p in ARX){ARCH[p]={};for(const n in ARX[p])ARCH[p][n]=AR
 const ARALIAS={'Playmaker':'Classic No.10','Mezzala':'Advanced Creator','Attacking Full-back':'Attacking Wing-Back','Defensive Full-back':'Defensive Full-Back','Ball-Playing CB':'Ball-Playing Defender'};
 function archOf(me){const L=ARX[me.pos];return L[me.arch]||L[ARALIAS[me.arch]]||L[Object.keys(L)[0]]}
 // ability multiplier from the archetype's ageing curve
-const archAge=(me,age)=>clamp(1+(archOf(me).age||0)*Math.max(0,age-29)*(age>=33&&(archOf(me).age||0)<0?1.3:1),.6,1.08);
+// Ability by age now comes from each archetype's physical/technical/IQ mix (COMPS in 20-world.js), which already makes pace-based archetypes fade earlier and
+// IQ-based ones later; the old per-archetype 'age' factor would double-count that, so it is neutral. (The 'age' fields above are kept for reference.)
+const archAge=(me,age)=>1;

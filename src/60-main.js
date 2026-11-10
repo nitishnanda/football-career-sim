@@ -1,5 +1,5 @@
 function doCreate(){
-  newCareer({name:CF.name.trim()||'Player',nat:CF.nat,pos:CF.pos,arch:CF.arch,foot:CF.foot,ht:+CF.ht||180,frame:CF.frame,tier:CF.tier==='random'?'random':+CF.tier,seed:CF.seed.trim(),startYear:+CF.era});
+  newCareer({name:CF.name.trim()||'Player',nat:CF.nat,pos:CF.pos,side:CF.side,arch:CF.arch,foot:CF.foot,ht:+CF.ht||180,frame:CF.frame,tier:CF.tier==='random'?'random':+CF.tier,seed:CF.seed.trim(),startYear:+CF.era});
   TAB='home';INB={f:'all',sel:null,log:0};
 }
 function exportSave(){
@@ -8,7 +8,7 @@ function exportSave(){
 }
 const ACT={
   create:doCreate,
-  cf:d=>{CF[d.k]=d.v;if(d.k==='pos'&&CF.arch!=='random')CF.arch=Object.keys(ARCH[CF.pos])[0]},
+  cf:d=>{if(d.k==='pos'&&(d.v==='LW'||d.v==='RW'||d.v==='LB'||d.v==='RB')){CF.pos=d.v.slice(1)==='W'?'W':'FB';CF.side=d.v[0]}else CF[d.k]=d.v;if(d.k==='pos'&&CF.arch!=='random')CF.arch=Object.keys(ARCH[CF.pos])[0]},
   yr:()=>{if(!ST.pend&&ST.phase==='youth')youthYear()},
   next:()=>{TAB='home';step()},
   chunk:d=>{for(let i=0;i<(+d.n||3)&&!ST.pend&&ST.phase==='play';i++){const n=ST.si;step();if(ST.si===n)break}},
@@ -25,7 +25,7 @@ const ACT={
   opendiv:d=>{LGV=+d.v;LT='table';UIM=null;TAB='league'},
   compact:()=>{COMPACT=!COMPACT},
   brk:()=>{BRK=!BRK},
-  focus:d=>{ST.me.focus=d.v},
+  focus:d=>{ST.me.focus=d.v},trg:d=>{TRG=d.v},
   cont:()=>closePend(),
   plan:()=>{UIM='plan'},gear:()=>{UIM='gear'},closem:()=>{UIM=null},export:exportSave,
   acad:d=>{ST.pend.sel=+d.v},
@@ -37,6 +37,7 @@ const ACT={
   log:()=>{INB.log=INB.log?0:1},
   acc:d=>{applyOffer(+d.v);TAB='home';DT='games';INB.sel=null},
   rej:d=>{rejectOffer(+d.v);INB.sel=null},
+  rein:d=>{reinvent(+d.v);INB.sel=null},reinx:()=>{reinventDecline();INB.sel=null},
   ctr:d=>counterOffer(+d.v),
   cons:()=>consult(),push:d=>pushBid(+d.v),ask:d=>askLeave(+d.v),
   reset:()=>{if(confirm('Start a new career? This one stays saved and you can load it again from Saves.')){save();ST=null;SLOT=null;UIM=null}},

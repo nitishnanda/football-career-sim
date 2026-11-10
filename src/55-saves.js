@@ -67,9 +67,25 @@ function upgradeSave(){
   S.news=S.news||[];S.hist=S.hist||[];S.hof=S.hof||[];S.mineLog=S.mineLog||[];S.res=S.res||{};
   me.archHidden=me.archHidden||0;me.peak=me.peak||me.ovr;if(!ARX[me.pos][me.arch]&&!ARALIAS[me.arch])me.arch=Object.keys(ARX[me.pos])[0];
   for(const k of['lg','cup','eu','yth','nat'])if(me.ss&&me.ss[k])for(const f of['dr','tk','ic','bl','du','duw','dra','past','fd','fc','sv','yc','sot'])me.ss[k][f]=me.ss[k][f]||0;
+  // v15: ability is now built from physical / technical / IQ components (see COMPS). Rescale each player's potential so today's rating is unchanged.
+  const oldF=a=>F[clamp(Math.round(a),7,43)-7];
+  if(S._from&&S._from<15){
+    me.pks=clamp(Math.round(R(S.seed+'|pks').norm(0,2.2)*10)/10,-5,5);me.tks=clamp(Math.round(R(S.seed+'|tks').norm(0,2.2)*10)/10,-5,5);me.iqs=clamp(Math.round(R(S.seed+'|iqs').norm(0,3.2)*10)/10,-7,7);
+    me.pa=Math.round(me.pa*oldF(me.age)/fOf(me,me.age)*10)/10;
+    for(const p of W.pl){if(!p)continue;shiftsOf(p);p.pa=Math.round(p.pa*oldF(p.age)/fOf(p,p.age)*10)/10;delete p.sks}
+    notes.push('separate physical, technical and IQ peaks');
+  }
+  // v18/v19: wingers and full-backs have a side (LW / RW, LB / RB)
+  if(SIDED[me.pos]&&!me.sd)me.sd=me.foot==='Left'?'L':'R';
+  for(const pos of['W','FB'])for(const c of W.clubs){const ws=c.sq.map(id=>W.pl[id]).filter(p=>p&&p.pos===pos&&!p.sd).sort((a,b)=>b.ovr-a.ovr);if(ws.length){const m=assignSides(ws);for(const p of ws)p.sd=m.get(p)}}
+  for(const p of W.pl)if(p&&SIDED[p.pos]&&!p.sd)p.sd=sideHash(p.n);
+  if(!me.bkr)me.bkr={};
+  if(!me.sdev)me.sdev={};
+  if(!me.amax)me.amax=Object.assign({},me.attr);
+  if(me.pks==null)me.pks=0;if(me.tks==null)me.tks=0;if(me.iqs==null)me.iqs=0;delete me.sks;
   let wages=0;
   for(const p of W.pl){if(!p)continue;
-    if(p.pk==null)p.pk=p.age>=29?Math.min(p.ovr+12,Math.round(p.ovr/fAge(p.age))):p.ovr;
+    if(p.pk==null)p.pk=p.age>=29?Math.min(p.ovr+12,Math.round(p.ovr/fOf(p,p.age))):p.ovr;
     if(!Array.isArray(p.x))p.x=[];p.mn=p.mn||0;p.st=p.st||0;
   }
   for(const c of W.clubs){c._bp=null;c._av=null;for(const id of c.sq){const p=W.pl[id];if(p&&p.wg==null){p.wg=wageFor(c,wageVal(p.ovr,p.age,p.pa,c,p.pk));wages++}}}
@@ -81,6 +97,7 @@ function upgradeSave(){
     setupSeason();S.me.role=calcRole();S.pend={t:'train'};
     notes.push('the new cup and European formats (this season restarts from matchday 1)');
   }
+  refresh(me);if(!me.s0)me.s0=Object.assign({},me.sub||{});   // builds the sub-attributes for saves from before they existed
   if(S._from&&S._from<VER||notes.length)addMsg('club','Game updated',notes.length?'Your save was brought up to date: '+notes.join(', ')+'. Your career history is unchanged.':'Your save was brought up to date. Nothing in your career changed.');
   delete S._from;
 }
