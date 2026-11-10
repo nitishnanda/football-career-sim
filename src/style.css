@@ -311,3 +311,18 @@ details.dsc summary{cursor:pointer;color:var(--tx);padding:10px 4px}details.dsc[
 .bkmeta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px 96px}
 .bkstrip{display:flex;gap:3px;flex-wrap:wrap}
 .bkstrip i{width:11px;height:11px;border-radius:3px;display:block}
+/* phones: a grid item must be allowed to shrink below its content (otherwise one wide table widens the whole page), tables scroll sideways inside their card,
+   and touch targets get a comfortable size without changing the layout */
+.g12>*{min-width:0}
+@media(max-width:700px){
+  table.tb{display:block;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+}
+@media(pointer:coarse){
+  a.lk{display:inline-block;padding:7px 3px;margin:-7px -3px}
+  button.row.sp{min-height:44px}
+  .actbar .btn.sm,.actbar .btn.alt.sm{padding-top:13px;padding-bottom:13px}
+  .dock button,.dock a{min-height:46px}
+  .xi .pl .pp-l{font-size:10px}
+  .seg2 button,.tabsm button{min-height:40px}
+}
+.inbox>*{min-width:0}

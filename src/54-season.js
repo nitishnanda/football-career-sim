@@ -38,7 +38,7 @@ function vSeasonHero(){
     }
     pl=t.w+t.d+t.l;lbl='U18 League season';rc2=esc(mc.name)+' U18 record';
   }
-  const pct=Math.round(pl/md*100);
+  const pct=Math.min(100,Math.round(pl/md*100));   // never past the end of the bar
   const nx=nf?(oc?`${nf.h?'vs':'@'} ${esc(oc.name)} (${oc.t.w}-${oc.t.d}-${oc.t.l})`:nf.y&&nf.o!=null?`${nf.h?'vs':'@'} ${esc(club(nf.o).name)} U18`:esc(nf.c)):'Season complete';
   const fm=me.form.slice(-5).map(r=>rb(r)).join('');
   const f=me.focus||keysOf(me)[0];
