@@ -216,7 +216,7 @@ function vShotMap(){
 
 /* ---------- rating breakdown (see 32-breakdown.js) ---------- */
 // a centred bar: green/yellow to the right, orange/red to the left, full width at three typical spreads
-const bkBar=z=>{const w=Math.min(1,Math.abs(z)/3)*50;return`<div class="bkbar"><i class="${bkCls(z)}" style="${z>=0?'left:50%':'right:50%'};width:${w}%"></i></div>`};
+const bkBar=z=>{const w=Math.min(1,Math.abs(z)/3)*50;return`<div class="bkbar"><i class="${bkCls(z)} ${z>=0?'bp':'bn'}" style="${z>=0?'left:50%':'right:50%'};width:${w}%"></i></div>`};
 const sgn=v=>(v>=0?'+':'')+v.toFixed(2);
 // one match: the four bars, then how the rating adds up from 6.5
 function vBk(pos,bd,rating){

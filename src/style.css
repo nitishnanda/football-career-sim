@@ -307,7 +307,9 @@ details.dsc summary{cursor:pointer;color:var(--tx);padding:10px 4px}details.dsc[
 .bkrow .nm{width:86px;font-size:13px}
 .bkbar{position:relative;flex:1;height:10px;border-radius:6px;background:rgba(255,255,255,.07)}
 .bkbar::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:rgba(255,255,255,.4);border-radius:1px;z-index:1}
-.bkbar i{position:absolute;top:0;bottom:0;border-radius:6px}
+.bkbar i{position:absolute;top:0;bottom:0;border-radius:0}
+.bkbar i.bp{border-radius:0 6px 6px 0}
+.bkbar i.bn{border-radius:6px 0 0 6px}
 .bkmeta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px 96px}
 .bkstrip{display:flex;gap:3px;flex-wrap:wrap}
 .bkstrip i{width:11px;height:11px;border-radius:3px;display:block}

@@ -308,7 +308,9 @@ details.dsc summary{cursor:pointer;color:var(--tx);padding:10px 4px}details.dsc[
 .bkrow .nm{width:86px;font-size:13px}
 .bkbar{position:relative;flex:1;height:10px;border-radius:6px;background:rgba(255,255,255,.07)}
 .bkbar::before{content:"";position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:rgba(255,255,255,.4);border-radius:1px;z-index:1}
-.bkbar i{position:absolute;top:0;bottom:0;border-radius:6px}
+.bkbar i{position:absolute;top:0;bottom:0;border-radius:0}
+.bkbar i.bp{border-radius:0 6px 6px 0}
+.bkbar i.bn{border-radius:6px 0 0 6px}
 .bkmeta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px 96px}
 .bkstrip{display:flex;gap:3px;flex-wrap:wrap}
 .bkstrip i{width:11px;height:11px;border-radius:3px;display:block}
@@ -2184,7 +2186,7 @@ const BKSD={GK:[.622,.122,.077],CB:[.155,.15,.036,.319],FB:[.154,.208,.056,.278]
 const BKMED={GK:[-.23,.01,-.04],CB:[-.05,-.01,0,.09],FB:[-.06,-.05,0,.07],DM:[-.07,-.02,0,.04],CM:[-.09,-.05,0,0],AM:[-.19,-.09,-.01,-.01],W:[-.2,-.07,-.01,0],ST:[-.29,-.06,-.01,-.01]};
 const bkZ=(pos,i,v)=>v/((BKSD[pos]||BKSD.CM)[i]||.2);                      // an average over many games, against the mean
 const bkZg=(pos,i,v)=>(v-((BKMED[pos]||BKMED.CM)[i]||0))/((BKSD[pos]||BKSD.CM)[i]||.2);   // a single game, against the typical game
-const bkCls=z=>Math.abs(z)<.2?'rn':rc(6.5+.75*z);
+const bkCls=z=>rc(6.5+.75*z);   // same colour scale as match ratings: purple 9+, blue 8+, green 7+, gold 6.5+, orange 6+, red below
 // the average game for each role he has played: add one match
 function bkAdd(me,bd){
   const key=me.arch+'|'+me.pos;me.bkr=me.bkr||{};
@@ -4703,7 +4705,7 @@ function vShotMap(){
 
 /* ---------- rating breakdown (see 32-breakdown.js) ---------- */
 // a centred bar: green/yellow to the right, orange/red to the left, full width at three typical spreads
-const bkBar=z=>{const w=Math.min(1,Math.abs(z)/3)*50;return`<div class="bkbar"><i class="${bkCls(z)}" style="${z>=0?'left:50%':'right:50%'};width:${w}%"></i></div>`};
+const bkBar=z=>{const w=Math.min(1,Math.abs(z)/3)*50;return`<div class="bkbar"><i class="${bkCls(z)} ${z>=0?'bp':'bn'}" style="${z>=0?'left:50%':'right:50%'};width:${w}%"></i></div>`};
 const sgn=v=>(v>=0?'+':'')+v.toFixed(2);
 // one match: the four bars, then how the rating adds up from 6.5
 function vBk(pos,bd,rating){

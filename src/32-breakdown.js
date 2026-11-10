@@ -32,7 +32,7 @@ const BKSD={GK:[.622,.122,.077],CB:[.155,.15,.036,.319],FB:[.154,.208,.056,.278]
 const BKMED={GK:[-.23,.01,-.04],CB:[-.05,-.01,0,.09],FB:[-.06,-.05,0,.07],DM:[-.07,-.02,0,.04],CM:[-.09,-.05,0,0],AM:[-.19,-.09,-.01,-.01],W:[-.2,-.07,-.01,0],ST:[-.29,-.06,-.01,-.01]};
 const bkZ=(pos,i,v)=>v/((BKSD[pos]||BKSD.CM)[i]||.2);                      // an average over many games, against the mean
 const bkZg=(pos,i,v)=>(v-((BKMED[pos]||BKMED.CM)[i]||0))/((BKSD[pos]||BKSD.CM)[i]||.2);   // a single game, against the typical game
-const bkCls=z=>Math.abs(z)<.2?'rn':rc(6.5+.75*z);
+const bkCls=z=>rc(6.5+.75*z);   // same colour scale as match ratings: purple 9+, blue 8+, green 7+, gold 6.5+, orange 6+, red below
 // the average game for each role he has played: add one match
 function bkAdd(me,bd){
   const key=me.arch+'|'+me.pos;me.bkr=me.bkr||{};
