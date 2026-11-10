@@ -197,7 +197,7 @@ function mkReport(res,kind,lab,hc,ac,pl){
       if(pl.inj.w>=12)injuryCost(me,pl.inj);
     }
   }
-  ST.mineLog.push({c:lab,o:sd?hc.name:ac.name,h:sd?0:1,gf,ga,rt:res.me?res.me.rating:null,bd:res.me&&res.me.bd?res.me.bd.c:null,g:res.me?res.me.g:0,a:res.me?res.me.a:0,m:pl.mode,mn:res.me?res.me.min:0,wk:r.wk});
+  ST.mineLog.push({c:lab,o:sd?hc.name:ac.name,h:sd?0:1,gf,ga,rt:res.me?res.me.rating:null,bd:res.me&&res.me.bd?res.me.bd.bs:null,g:res.me?res.me.g:0,a:res.me?res.me.a:0,m:pl.mode,mn:res.me?res.me.min:0,wk:r.wk});
   ST.hist=ST.hist||[];ST.hist.unshift(r);if(ST.hist.length>40)ST.hist.pop();
   return r;
 }

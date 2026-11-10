@@ -3,8 +3,6 @@
    with real over-dispersion; the rating is the fitted linear model of those stats plus result, clamped 3-10. */
 const RM=REAL.rating||null;
 const RAVG=RM?6.98:6.8;
-// small per-position correction measured by scripts/validate_ratings.js (real minus simulated starter mean)
-const RCAL={GK:-.02,CB:0,FB:0,DM:.05,CM:.03,AM:.1,W:.09,ST:0};   // a typical starter's match rating on this scale
 const GSK=['shoff','sotng','kpx','pas','pmiss','tk','bl','ic','duw','dul','drs','drf','past','fd','fc','off','sv','yc'];
 const SATT={shoff:'sho',sotng:'sho',kpx:'pas',pas:'pas',pmiss:'pas',tk:'def',bl:'def',ic:'def',duw:'phy',dul:'phy',drs:'dri',drf:'dri',past:'def',fd:'dri',fc:'def',off:'pac',sv:'ref',yc:'def'};
 const GATT={pas:'kic',pmiss:'kic',sv:'ref'};
@@ -12,11 +10,9 @@ const XMAP={shoff:'sh',sotng:'sh',kpx:'kp',pas:'kp',drs:'dr',drf:'dr',tk:'tk',ic
 function gammaS(g,k){if(k<1)return gammaS(g,k+1)*Math.pow(g.r()||1e-9,1/k);const d=k-1/3,c=1/Math.sqrt(9*d);for(;;){let x,v;do{x=g.norm(0,1);v=1+c*x}while(v<=0);v=v*v*v;const u=g.r();if(u<1-.0331*x*x*x*x||Math.log(u)<.5*x*x+d*(1-v+Math.log(v)))return d*v}}
 function cnt(g,mu,disp){if(mu<=0)return 0;if(disp<=1.03)return g.pois(mu);const k=mu/(disp-1);return g.pois(gammaS(g,k)*mu/k)}
 // g: optional random stream for the part of a rating no box-score stat explains (model residual)
-/* A standout game is easier to push to 10 than the plain linear model allows: above TAIL_K the rating is stretched by TAIL_S (ordinary ratings are untouched; a hat-trick
-   in a win reaches 10.0 about a fifth of the time, a hat-trick and an assist about two games in three, four goals nearly always). */
-const TAIL_K=9.0,TAIL_S=1.2,tailR=r=>r>TAIL_K?TAIL_K+(r-TAIL_K)*TAIL_S:r;
-function ratingRaw(pos,f,g){const M=RM.model[pos]||RM.model.CM;let r=M.b0+(RCAL[pos]||0);for(const k in M.w)r+=M.w[k]*(f[k]||0);if(g)r+=g.norm(0,M.sd||.25);return r}
-function ratingOf(pos,f,g){return clamp(Math.round(tailR(ratingRaw(pos,f,g))*10)/10,3,10)}
+// the unexplained part of a rating (style, noise), in rating points: it goes to the Impact category (see 32-breakdown.js)
+const ratingNoise=(pos,g)=>g?g.norm(0,(RM.model[pos]||RM.model.CM).sd||.25):0;
+function ratingOf(pos,f,g){return rateOf(pos,bkScores(pos,f,ratingNoise(pos,g)))}
 // q: number (player overall) or function(stat)->effective quality; xm: archetype multipliers; vol: extra spread for dribble-heavy styles
 function simLine(g,pos,min,gl,as,gf,ga,poss,opx,q,xm,vol,red,gcOn){
   const G=RM.gen[pos]||RM.gen.CM,f={m90:min/90,short:min<25?1:0,g:gl,g2:Math.max(0,gl-1),a:as};
@@ -39,15 +35,13 @@ const possOf=(sh,sa,g,neutral)=>clamp((neutral?.5:.52)+.011*(sh.m-sa.m)+g.norm(0
 // in matches the user does not see in detail, so a season sims fast; the distribution matches simLine.
 function ratingFast(g,pos,min,gl,as,gf,ga,poss,opx,q,acc,gcOn){
   const G=RM.gen[pos]||RM.gen.CM,M=RM.model[pos]||RM.model.CM,W_=M.w;
-  let r=M.b0+(RCAL[pos]||0)+W_.m90*min/90+(min<25?W_.short:0)+W_.g*gl+W_.g2*Math.max(0,gl-1)+W_.a*as,v=0;
+  let v=0;
   const mus={};
-  for(const s of GSK){const P=G[s];if(!P)continue;let mu=P[0]*min/90*Math.exp(P[1]*(poss-.5)+P[2]*(q-G.qref));if(s==='sv')mu*=opx;mus[s]=mu;const w=W_[s]||0;r+=w*mu;v+=w*w*mu*P[3]}
+  for(const s of GSK){const P=G[s];if(!P)continue;let mu=P[0]*min/90*Math.exp(P[1]*(poss-.5)+P[2]*(q-G.qref));if(s==='sv')mu*=opx;mus[s]=mu;const w=W_[s]||0;v+=w*w*mu*P[3]}
   if(acc)addLine(acc,mus,gl,as,g);
-  const gc=gcOn!=null?gcOn:(min>=85?ga:ga*min/90);
-  if(pos==='GK'||pos==='CB'||pos==='FB')r+=W_.gc*gc;
-  if(gc===0&&min>=60&&(pos==='GK'||pos==='CB'||pos==='FB'||pos==='DM'))r+=W_.cs;
-  r+=(gf>ga?W_.win:0)+(gf<ga?W_.loss:0)+W_.gd*clamp(gf-ga,-3,3);
-  return clamp(Math.round(tailR(r+g.norm(0,Math.sqrt(v+(M.sd||.25)**2)))*10)/10,3,10);
+  const gc=gcOn!=null?gcOn:(min>=85?ga:ga*min/90),back=pos==='GK'||pos==='CB'||pos==='FB';
+  Object.assign(mus,{m90:min/90,short:min<25?1:0,g:gl,g2:Math.max(0,gl-1),a:as,gc:back?gc:0,cs:(gc===0&&min>=60&&(back||pos==='DM'))?1:0,win:gf>ga?1:0,loss:gf<ga?1:0,gd:clamp(gf-ga,-3,3)});
+  return rateOf(pos,bkScores(pos,mus,g.norm(0,Math.sqrt(v+(M.sd||.25)**2))));
 }
 // What moved a rating: each stat's contribution relative to an average full game at the position
 const FLAB={g:'Goals',g2:'Extra goals',a:'Assists',shoff:'Shots off target',sotng:'Shots on target (saved)',kpx:'Key passes',pas:'Passes',pmiss:'Misplaced passes',tk:'Tackles',bl:'Blocks',ic:'Interceptions',duw:'Duels won',dul:'Duels lost',drs:'Dribbles completed',drf:'Dribbles lost',past:'Dribbled past',fd:'Fouls won',fc:'Fouls committed',yc:'Yellow card',rc:'Red card',pw:'Penalty won',pcm:'Penalty conceded',pm:'Penalty missed',off:'Offsides',sv:'Saves',gc:'Goals conceded',cs:'Clean sheet',win:'Win',loss:'Defeat',gd:'Goal difference'};

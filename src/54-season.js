@@ -38,7 +38,7 @@ function vSeasonHero(){
     }
     pl=t.w+t.d+t.l;lbl='U18 League season';rc2=esc(mc.name)+' U18 record';
   }
-  const pct=Math.round(pl/md*100);
+  const pct=Math.min(100,Math.round(pl/md*100));   // never past the end of the bar
   const nx=nf?(oc?`${nf.h?'vs':'@'} ${esc(oc.name)} (${oc.t.w}-${oc.t.d}-${oc.t.l})`:nf.y&&nf.o!=null?`${nf.h?'vs':'@'} ${esc(club(nf.o).name)} U18`:esc(nf.c)):'Season complete';
   const fm=me.form.slice(-5).map(r=>rb(r)).join('');
   const f=me.focus||keysOf(me)[0];
@@ -215,33 +215,32 @@ function vShotMap(){
 }
 
 /* ---------- rating breakdown (see 32-breakdown.js) ---------- */
-// a centred bar: green/yellow to the right, orange/red to the left, full width at three typical spreads
-const bkBar=z=>{const w=Math.min(1,Math.abs(z)/3)*50;return`<div class="bkbar"><i class="${bkCls(z)}" style="${z>=0?'left:50%':'right:50%'};width:${w}%"></i></div>`};
+// a centred bar: the category score from -1 to +1, filled from the middle line outwards in the colour of that score
+const bkBar=sc=>{const w=Math.min(1,Math.abs(sc))*50;return`<div class="bkbar"><i class="${bkCls(sc)} ${sc>=0?'bp':'bn'}" style="${sc>=0?'left:50%':'right:50%'};width:${w}%"></i></div>`};
 const sgn=v=>(v>=0?'+':'')+v.toFixed(2);
-// one match: the four bars, then how the rating adds up from 6.5
+// one match: the category bars, then how the rating adds up from 6.5
 function vBk(pos,bd,rating){
-  if(!bd)return'';
-  const cats=bkCats(pos),sum=bd.c.reduce((a,b)=>a+b,0);
-  return`<h3 class="mt">Rating breakdown</h3><div class="bkhead"><span class="m sm">Every rating starts at 6.5</span><span class="mono sm">impact on this match</span></div>
-  ${cats.map(([lab],i)=>{const z=bkZg(pos,i,bd.c[i]);return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(z)}</div>`}).join('')}
-  <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.50</b></div><div class="kv"><span>A typical ${esc(POSN[pos].toLowerCase())} match (minutes and involvement)</span><b class="mono">${sgn(bd.t)}</b></div>
-  ${cats.map(([lab],i)=>`<div class="kv"><span>${lab}</span><b class="mono" style="color:var(--${bd.c[i]>=.05?'good':bd.c[i]<=-.05?'badc':'tx'})">${sgn(bd.c[i])}</b></div>`).join('')}
-  <div class="kv"><span>Team result</span><b class="mono">${sgn(bd.x)}</b></div>${bd.s>=.03?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bd.s)}</b></div>`:''}<div class="kv"><span>Style and match feel</span><b class="mono">${sgn(bd.o)}</b></div>
-  <div class="kv"><span><b>Rating</b>${Math.abs(6.5+bd.t+sum+bd.x+(bd.s||0)+bd.o-rating)>.06?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Compared with an average game at your position. Ratings come from a model fitted on 91,000 real player-matches.</div>`;
+  if(!bd||!bd.bs)return'';
+  const cats=bkCats(pos),W=BKW[pos]||BKW.CM,pts=cats.map(([,i])=>bkPts(pos,i,bd.bs[i])),tot=pts.reduce((a,b)=>a+b,0);
+  return`<h3 class="mt">Rating breakdown</h3><div class="bkhead"><span class="m sm">Every rating starts at 6.5</span><span class="mono sm">score, -1 to +1</span></div>
+  ${cats.map(([lab,i])=>`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(bd.bs[i])}</div>`).join('')}
+  <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.50</b></div>
+  ${cats.map(([lab,i],j)=>`<div class="kv"><span>${lab} <span class="m sm">${sgn(bd.bs[i])} × ${Math.round(W[i]*100)}% × ${bd.bs[i]>=0?4:3}</span></span><b class="mono" style="color:var(--${pts[j]>=.05?'good':pts[j]<=-.05?'badc':'tx'})">${sgn(pts[j])}</b></div>`).join('')}
+  ${6.5+tot>9.05?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bkBonus(6.5+tot))}</b></div>`:''}<div class="kv"><span><b>Rating</b>${rating<=3||rating>=10?' (kept between 3 and 10)':''}</span>${rb(rating)}</div></details><div class="m sm mt">Each score weighs differently by position. A positive score is worth up to 4 rating points, a negative one up to 3 (ratings stay between 3 and 10). Scores come from the match stats, in the same proportions as 91,000 real player-matches.</div>`;
 }
-// the average game: this role's average impact per category, a colour strip of recent games, and how each role he has played compares
+// the average game: this role's average category score, a colour strip of recent games, and how each role he has played compares
 function vProfile(){
-  const me=ST.me,pos=me.pos,cats=bkCats(pos),cur=(me.bkr||{})[me.arch+'|'+pos],log=(ST.mineLog||[]).filter(l=>l.bd&&l.bd.length===cats.length).slice(-20);
-  if(!cur&&!log.length)return G('pad s12',`${ico('🎨','Your average game','by category')}<div class="m">Play a few matches and this shows what your games are made of: how often shooting, passing, dribbling and defending lift your rating, and how that changes if you reinvent yourself.</div>`);
-  const rows=cats.map(([lab],i)=>{
-    const avg=cur?cur.sum[i]/cur.n:0,z=bkZ(pos,i,avg),gp=cur?Math.round(cur.g[i]/cur.n*100):0,rp=cur?Math.round(cur.r[i]/cur.n*100):0;
-    const strip=log.map(l=>`<i class="${bkCls(bkZg(pos,i,l.bd[i]))}" title="${esc(l.c.split(' · ')[0])} vs ${esc(l.o)}: ${sgn(l.bd[i])}"></i>`).join('');
-    return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(z)}<b class="mono sm" style="width:46px;text-align:right">${sgn(avg)}</b></div>
+  const me=ST.me,pos=me.pos,cats=bkCats(pos),cur=(me.bkr||{})[me.arch+'|'+pos],log=(ST.mineLog||[]).filter(l=>l.bd&&l.bd.length===5).slice(-20);
+  if(!cur&&!log.length)return G('pad s12',`${ico('🎨','Your average game','by category')}<div class="m">Play a few matches and this shows what your games are made of: how often impact, shooting, passing, dribbling and defending lift your rating, and how that changes if you reinvent yourself.</div>`);
+  const rows=cats.map(([lab,i])=>{
+    const avg=cur?cur.sum[i]/cur.n:0,gp=cur?Math.round(cur.g[i]/cur.n*100):0,rp=cur?Math.round(cur.r[i]/cur.n*100):0;
+    const strip=log.map(l=>`<i class="${bkCls(l.bd[i])}" title="${esc(l.c.split(' · ')[0])} vs ${esc(l.o)}: ${sgn(l.bd[i])}"></i>`).join('');
+    return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(avg)}<b class="mono sm" style="width:46px;text-align:right">${sgn(avg)}</b></div>
     <div class="bkmeta"><div class="bkstrip">${strip}</div><span class="m sm">${gp}% green · ${rp}% below par</span></div>`}).join('');
   // other roles he has played, newest last
-  const roles=Object.values(me.bkr||{}).filter(o=>o.n>=3&&bkCats(o.pos).length===cats.length);
+  const roles=Object.values(me.bkr||{}).filter(o=>o.v===5&&o.n>=3);
   const cmp=roles.length>=2?`<h3 class="mt">How reinventing changed your game</h3><div style="overflow-x:auto"><table class="tb"><tr><th></th>${roles.map(o=>`<th class="r">${esc(o.arch)}<br><span class="m sm">${o.n} games</span></th>`).join('')}<th class="r">Change</th></tr>
-    ${cats.map(([lab],i)=>{const zs=roles.map(o=>bkZ(o.pos,i,o.sum[i]/o.n)),d=zs[zs.length-1]-zs[zs.length-2];
-      return`<tr><td>${lab}</td>${roles.map((o,k)=>`<td class="r"><span class="rb ${bkCls(zs[k])}">${sgn(o.sum[i]/o.n)}</span> <span class="m sm">${Math.round(o.g[i]/o.n*100)}%</span></td>`).join('')}<td class="r"><b style="color:var(--${d>.15?'good':d<-.15?'badc':'tx'})">${d>.15?'▲':d<-.15?'▼':'–'} ${Math.abs(d).toFixed(1)}</b></td></tr>`}).join('')}</table></div><div class="m sm mt">Average impact per game, and the share of games where the category was worth 7.0+ on its own. Change is in typical spreads between your last two roles.</div>`:'';
-  return G('pad s12',`${ico('🎨','Your average game',esc(me.arch)+' · '+(cur?cur.n:0)+' games')}<div class="bkhead"><span class="m sm">Each square is one match, newest on the right</span><span class="mono sm">average impact</span></div>${rows}${cmp}`);
+    ${cats.map(([lab,i])=>{const zs=roles.map(o=>o.sum[i]/o.n),d=zs[zs.length-1]-zs[zs.length-2];
+      return`<tr><td>${lab}</td>${roles.map((o,k)=>`<td class="r"><span class="rb ${bkCls(zs[k])}">${sgn(zs[k])}</span> <span class="m sm">${Math.round(o.g[i]/o.n*100)}%</span></td>`).join('')}<td class="r"><b style="color:var(--${d>.05?'good':d<-.05?'badc':'tx'})">${d>.05?'▲':d<-.05?'▼':'–'} ${Math.abs(d).toFixed(2)}</b></td></tr>`}).join('')}</table></div><div class="m sm mt">Average category score per game (-1 to +1), and the share of games where it was 0.3 or better. Change is the difference between your last two roles.</div>`:'';
+  return G('pad s12',`${ico('🎨','Your average game',esc(me.arch)+' · '+(cur?cur.n:0)+' games')}<div class="bkhead"><span class="m sm">Each square is one match, newest on the right</span><span class="mono sm">average score</span></div>${rows}${cmp}`);
 }
