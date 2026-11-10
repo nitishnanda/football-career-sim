@@ -1,0 +1,72 @@
+# Builds the single-file game (scripts/build.py -> dist/index.html), checks it, and publishes it to GitHub Pages.
+# Pull requests only build and test. Pushes to main (and a manual run) also deploy.
+# One-time setup in the repository: Settings -> Pages -> Build and deployment -> Source: GitHub Actions.
+name: Build and publish
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Syntax check every source file
+        run: |
+          for f in src/*.js; do node --check "$f"; done
+
+      - name: UI smoke test (every screen renders, no undefined or NaN)
+        run: node test/ui-smoke.js
+
+      - name: Build
+        run: |
+          python3 scripts/build.py
+          test -s dist/index.html
+
+      - name: Prepare the site
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir _site
+          cp dist/index.html _site/index.html
+          touch _site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
+
+      - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
+        with:
+          path: _site
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
