@@ -80,6 +80,8 @@ function upgradeSave(){
   for(const pos of['W','FB'])for(const c of W.clubs){const ws=c.sq.map(id=>W.pl[id]).filter(p=>p&&p.pos===pos&&!p.sd).sort((a,b)=>b.ovr-a.ovr);if(ws.length){const m=assignSides(ws);for(const p of ws)p.sd=m.get(p)}}
   for(const p of W.pl)if(p&&SIDED[p.pos]&&!p.sd)p.sd=sideHash(p.n);
   if(!me.bkr)me.bkr={};
+  for(const k of Object.keys(me.bkr))if(me.bkr[k].v!==5)delete me.bkr[k];   // the rating breakdown moved to five category scores
+  if(ST.mineLog)for(const l of ST.mineLog)if(l.bd&&l.bd.length!==5)l.bd=null;
   if(!me.sdev)me.sdev={};
   if(!me.amax)me.amax=Object.assign({},me.attr);
   if(me.pks==null)me.pks=0;if(me.tks==null)me.tks=0;if(me.iqs==null)me.iqs=0;delete me.sks;
