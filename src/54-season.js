@@ -223,7 +223,7 @@ function vBk(pos,bd,rating){
   if(!bd)return'';
   const cats=bkCats(pos),sum=bd.c.reduce((a,b)=>a+b,0);
   return`<h3 class="mt">Rating breakdown</h3><div class="bkhead"><span class="m sm">Every rating starts at 6.5</span><span class="mono sm">impact on this match</span></div>
-  ${cats.map(([lab],i)=>{const z=bkZg(pos,i,bd.c[i]);return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(z)}</div>`}).join('')}
+  ${(()=>{const G=bkGame(pos,bd.c,rating);return cats.map(([lab],i)=>`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(G[i].z)}</div>`).join('')})()}
   <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.50</b></div><div class="kv"><span>A typical ${esc(POSN[pos].toLowerCase())} match (minutes and involvement)</span><b class="mono">${sgn(bd.t)}</b></div>
   ${cats.map(([lab],i)=>`<div class="kv"><span>${lab}</span><b class="mono" style="color:var(--${bd.c[i]>=.05?'good':bd.c[i]<=-.05?'badc':'tx'})">${sgn(bd.c[i])}</b></div>`).join('')}
   <div class="kv"><span>Team result</span><b class="mono">${sgn(bd.x)}</b></div>${bd.s>=.03?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bd.s)}</b></div>`:''}<div class="kv"><span>Style and match feel</span><b class="mono">${sgn(bd.o)}</b></div>
@@ -235,7 +235,7 @@ function vProfile(){
   if(!cur&&!log.length)return G('pad s12',`${ico('🎨','Your average game','by category')}<div class="m">Play a few matches and this shows what your games are made of: how often shooting, passing, dribbling and defending lift your rating, and how that changes if you reinvent yourself.</div>`);
   const rows=cats.map(([lab],i)=>{
     const avg=cur?cur.sum[i]/cur.n:0,z=bkZ(pos,i,avg),gp=cur?Math.round(cur.g[i]/cur.n*100):0,rp=cur?Math.round(cur.r[i]/cur.n*100):0;
-    const strip=log.map(l=>`<i class="${bkCls(bkZg(pos,i,l.bd[i]))}" title="${esc(l.c.split(' · ')[0])} vs ${esc(l.o)}: ${sgn(l.bd[i])}"></i>`).join('');
+    const strip=log.map(l=>`<i class="${bkGame(pos,l.bd,l.rt)[i].cls}" title="${esc(l.c.split(' · ')[0])} vs ${esc(l.o)}: ${sgn(l.bd[i])}"></i>`).join('');
     return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(z)}<b class="mono sm" style="width:46px;text-align:right">${sgn(avg)}</b></div>
     <div class="bkmeta"><div class="bkstrip">${strip}</div><span class="m sm">${gp}% green · ${rp}% below par</span></div>`}).join('');
   // other roles he has played, newest last

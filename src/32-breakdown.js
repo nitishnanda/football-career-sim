@@ -33,6 +33,17 @@ const BKMED={GK:[-.23,.01,-.04],CB:[-.05,-.01,0,.09],FB:[-.06,-.05,0,.07],DM:[-.
 const bkZ=(pos,i,v)=>v/((BKSD[pos]||BKSD.CM)[i]||.2);                      // an average over many games, against the mean
 const bkZg=(pos,i,v)=>(v-((BKMED[pos]||BKMED.CM)[i]||0))/((BKSD[pos]||BKSD.CM)[i]||.2);   // a single game, against the typical game
 const bkCls=z=>rc(6.5+.75*z);   // same colour scale as match ratings: purple 9+, blue 8+, green 7+, gold 6.5+, orange 6+, red below
+/* One match: the colours follow the overall rating, so a bar never outshines the game it belongs to. Below 8.0 no bar goes past green and from 8.0 to 9.0 none
+   goes past blue (plenty of 7s and 8s are just greens with a weak defending bar); a 9.0+ game always has one purple bar or two blues. Returns each bar's z, kept inside its colour. */
+const BKZ={r3:.001,r4:.67,r5:2,r6:3.34};   // lowest z of each colour on the rating palette (6.5+.75z: 7.0, 8.0, 9.0)
+function bkGame(pos,c,rt){
+  const z=c.map((v,i)=>bkZg(pos,i,v));if(rt==null)return z.map(v=>({z:v,cls:bkCls(v)}));
+  const mx=rt>=9?99:rt>=8?3.33:1.99;let o=z.map(v=>Math.min(v,mx));
+  if(rt>=9){const pu=o.filter(v=>v>=BKZ.r6).length,bl=o.filter(v=>v>=BKZ.r5&&v<BKZ.r6).length;
+    if(!pu&&bl<2){const ix=o.map((v,i)=>i).sort((a,b)=>o[b]-o[a]);
+      if(o[ix[1]]>=1.2){o[ix[0]]=Math.max(o[ix[0]],BKZ.r5+.2);o[ix[1]]=Math.max(o[ix[1]],BKZ.r5+.05)}else o[ix[0]]=Math.max(o[ix[0]],BKZ.r6+.15)}}
+  return o.map(v=>({z:v,cls:bkCls(v)}));
+}
 // the average game for each role he has played: add one match
 function bkAdd(me,bd){
   const key=me.arch+'|'+me.pos;me.bkr=me.bkr||{};

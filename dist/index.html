@@ -2187,6 +2187,17 @@ const BKMED={GK:[-.23,.01,-.04],CB:[-.05,-.01,0,.09],FB:[-.06,-.05,0,.07],DM:[-.
 const bkZ=(pos,i,v)=>v/((BKSD[pos]||BKSD.CM)[i]||.2);                      // an average over many games, against the mean
 const bkZg=(pos,i,v)=>(v-((BKMED[pos]||BKMED.CM)[i]||0))/((BKSD[pos]||BKSD.CM)[i]||.2);   // a single game, against the typical game
 const bkCls=z=>rc(6.5+.75*z);   // same colour scale as match ratings: purple 9+, blue 8+, green 7+, gold 6.5+, orange 6+, red below
+/* One match: the colours follow the overall rating, so a bar never outshines the game it belongs to. Below 8.0 no bar goes past green and from 8.0 to 9.0 none
+   goes past blue (plenty of 7s and 8s are just greens with a weak defending bar); a 9.0+ game always has one purple bar or two blues. Returns each bar's z, kept inside its colour. */
+const BKZ={r3:.001,r4:.67,r5:2,r6:3.34};   // lowest z of each colour on the rating palette (6.5+.75z: 7.0, 8.0, 9.0)
+function bkGame(pos,c,rt){
+  const z=c.map((v,i)=>bkZg(pos,i,v));if(rt==null)return z.map(v=>({z:v,cls:bkCls(v)}));
+  const mx=rt>=9?99:rt>=8?3.33:1.99;let o=z.map(v=>Math.min(v,mx));
+  if(rt>=9){const pu=o.filter(v=>v>=BKZ.r6).length,bl=o.filter(v=>v>=BKZ.r5&&v<BKZ.r6).length;
+    if(!pu&&bl<2){const ix=o.map((v,i)=>i).sort((a,b)=>o[b]-o[a]);
+      if(o[ix[1]]>=1.2){o[ix[0]]=Math.max(o[ix[0]],BKZ.r5+.2);o[ix[1]]=Math.max(o[ix[1]],BKZ.r5+.05)}else o[ix[0]]=Math.max(o[ix[0]],BKZ.r6+.15)}}
+  return o.map(v=>({z:v,cls:bkCls(v)}));
+}
 // the average game for each role he has played: add one match
 function bkAdd(me,bd){
   const key=me.arch+'|'+me.pos;me.bkr=me.bkr||{};
@@ -4712,7 +4723,7 @@ function vBk(pos,bd,rating){
   if(!bd)return'';
   const cats=bkCats(pos),sum=bd.c.reduce((a,b)=>a+b,0);
   return`<h3 class="mt">Rating breakdown</h3><div class="bkhead"><span class="m sm">Every rating starts at 6.5</span><span class="mono sm">impact on this match</span></div>
-  ${cats.map(([lab],i)=>{const z=bkZg(pos,i,bd.c[i]);return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(z)}</div>`}).join('')}
+  ${(()=>{const G=bkGame(pos,bd.c,rating);return cats.map(([lab],i)=>`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(G[i].z)}</div>`).join('')})()}
   <details class="dsc"><summary>How it adds up</summary><div class="kv"><span>Base</span><b class="mono">6.50</b></div><div class="kv"><span>A typical ${esc(POSN[pos].toLowerCase())} match (minutes and involvement)</span><b class="mono">${sgn(bd.t)}</b></div>
   ${cats.map(([lab],i)=>`<div class="kv"><span>${lab}</span><b class="mono" style="color:var(--${bd.c[i]>=.05?'good':bd.c[i]<=-.05?'badc':'tx'})">${sgn(bd.c[i])}</b></div>`).join('')}
   <div class="kv"><span>Team result</span><b class="mono">${sgn(bd.x)}</b></div>${bd.s>=.03?`<div class="kv"><span>Standout game</span><b class="mono">${sgn(bd.s)}</b></div>`:''}<div class="kv"><span>Style and match feel</span><b class="mono">${sgn(bd.o)}</b></div>
@@ -4724,7 +4735,7 @@ function vProfile(){
   if(!cur&&!log.length)return G('pad s12',`${ico('🎨','Your average game','by category')}<div class="m">Play a few matches and this shows what your games are made of: how often shooting, passing, dribbling and defending lift your rating, and how that changes if you reinvent yourself.</div>`);
   const rows=cats.map(([lab],i)=>{
     const avg=cur?cur.sum[i]/cur.n:0,z=bkZ(pos,i,avg),gp=cur?Math.round(cur.g[i]/cur.n*100):0,rp=cur?Math.round(cur.r[i]/cur.n*100):0;
-    const strip=log.map(l=>`<i class="${bkCls(bkZg(pos,i,l.bd[i]))}" title="${esc(l.c.split(' · ')[0])} vs ${esc(l.o)}: ${sgn(l.bd[i])}"></i>`).join('');
+    const strip=log.map(l=>`<i class="${bkGame(pos,l.bd,l.rt)[i].cls}" title="${esc(l.c.split(' · ')[0])} vs ${esc(l.o)}: ${sgn(l.bd[i])}"></i>`).join('');
     return`<div class="bkrow"><span class="nm">${lab}</span>${bkBar(z)}<b class="mono sm" style="width:46px;text-align:right">${sgn(avg)}</b></div>
     <div class="bkmeta"><div class="bkstrip">${strip}</div><span class="m sm">${gp}% green · ${rp}% below par</span></div>`}).join('');
   // other roles he has played, newest last
